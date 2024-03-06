@@ -60,6 +60,7 @@ type Check struct {
 
 type TestConnector interface {
   GetLogin(name string) (*model.Login, error)
+  GetAadLogin(name string) (*model.AadLogin, error)
   GetUser(database, name string) (*model.User, error)
   GetDatabasePermissions(database, name string) (*model.DatabasePermissions, error)
   GetDatabaseRole(database, name string) (*model.DatabaseRole, error)
@@ -157,6 +158,10 @@ func getTestExternalConnector(a map[string]string, tenantId, clientId, clientSec
 
 func (t testConnector) GetLogin(name string) (*model.Login, error) {
   return t.c.(LoginConnector).GetLogin(context.Background(), name)
+}
+
+func (t testConnector) GetAadLogin(name string) (*model.AadLogin, error) {
+  return t.c.(AadLoginConnector).GetAadLogin(context.Background(), name)
 }
 
 func (t testConnector) GetUser(database, name string) (*model.User, error) {

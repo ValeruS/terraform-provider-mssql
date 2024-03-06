@@ -51,6 +51,7 @@ func Provider(factory model.ConnectorFactory) *schema.Provider {
       "mssql_database_schema": resourceDatabaseSchema(),
       "mssql_database_masterkey": resourceDatabaseMasterkey(),
       "mssql_database_credential": resourceDatabaseCredential(),
+      "mssql_aad_login": resourceAadLogin(),
     },
     DataSourcesMap: map[string]*schema.Resource{
       "mssql_login": dataSourceLogin(),
