@@ -72,3 +72,19 @@ func SQLIdentifierPassword(i interface{}, k string) (warnings []string, errors [
 		return
 	}
 }
+
+func SQLExternalDatasourceType(i interface{}, k string) (warnings []string, errors []error) {
+	v := i.(string)
+	found := false
+	for _, w := range []string{"BLOB_STORAGE", "RDBMS"} {
+		if v == w {
+			found = true
+		}
+	}
+	if !found {
+		errors = append(errors, fmt.Errorf(
+			"type must be one of BLOB_STORAGE or RDBMS. Got %q", v))
+	}
+
+	return
+}

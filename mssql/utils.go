@@ -62,6 +62,14 @@ func getDatabaseMasterkeyID(data *schema.ResourceData) string {
 	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, "masterkey")
 }
 
+func getExternalDatasourceID(data *schema.ResourceData) string {
+	host := data.Get(serverProp + ".0.host").(string)
+	port := data.Get(serverProp + ".0.port").(string)
+	database := data.Get(databaseProp).(string)
+	datasourcename := data.Get(datasourcenameProp).(string)
+	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, datasourcename)
+}
+
 func loggerFromMeta(meta interface{}, resource, function string) zerolog.Logger {
 	return meta.(model.Provider).ResourceLogger(resource, function)
 }
