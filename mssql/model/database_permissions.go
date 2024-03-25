@@ -1,8 +1,8 @@
 package model
 
 type DatabasePermissions struct {
-  DatabaseName string
-  UserName     string
-  PrincipalID  int
-  Permissions  []string
+	DatabaseName string
+	UserName     string
+	PrincipalID  int
+	Permissions  []string
 }

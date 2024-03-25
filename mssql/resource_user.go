@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"github.com/betr-io/terraform-provider-mssql/mssql/validate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
@@ -38,7 +39,7 @@ func resourceUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
-				ValidateFunc: SQLIdentifier,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			objectIdProp: {
 				Type:     schema.TypeString,
@@ -50,12 +51,14 @@ func resourceUser() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 				ConflictsWith: []string{passwordProp},
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			passwordProp: {
 				Type:      schema.TypeString,
 				Optional:  true,
 				ForceNew:  true,
 				Sensitive: true,
+				ValidateFunc: validate.SQLIdentifierPassword,
 			},
 			sidStrProp: {
 				Type:     schema.TypeString,
@@ -73,7 +76,6 @@ func resourceUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
-				// Default:  defaultSchemaPropDefault,
 			},
 			defaultLanguageProp: {
 				Type:     schema.TypeString,
@@ -124,9 +126,7 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 	} else {
 		authType = "EXTERNAL"
 	}
-	// if defaultSchema == "" {
-	// 	return diag.Errorf(defaultSchemaProp + " cannot be empty")
-	// }
+
 	if defaultSchema == "" {defaultSchema = "dbo"}
 
 	connector, err := getUserConnector(meta, data)
