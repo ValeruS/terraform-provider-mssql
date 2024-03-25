@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 )
 
 func (c *Connector) GetDatabaseRole(ctx context.Context, database, roleName string) (*model.DatabaseRole, error) {

@@ -6,7 +6,7 @@ terraform {
       version = "~> 3.0"
     }
     mssql = {
-      source  = "betr-io/mssql"
+      source  = "ValeruS/mssql"
       version = "~> 0.2"
     }
     random = {

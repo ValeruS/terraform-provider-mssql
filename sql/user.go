@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 )
 
 func (c *Connector) GetUser(ctx context.Context, database, username string) (*model.User, error) {

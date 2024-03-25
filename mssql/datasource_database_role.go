@@ -3,7 +3,7 @@ package mssql
 import (
 	"context"
 
-	"github.com/betr-io/terraform-provider-mssql/mssql/validate"
+	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"

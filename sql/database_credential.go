@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 )
 
 func (c *Connector) GetDatabaseCredential(ctx context.Context, database, credentialname string) (*model.DatabaseCredential, error) {

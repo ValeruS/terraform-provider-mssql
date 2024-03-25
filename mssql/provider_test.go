@@ -11,8 +11,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/betr-io/terraform-provider-mssql/mssql/model"
-	"github.com/betr-io/terraform-provider-mssql/sql"
+	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
+	"github.com/ValeruS/terraform-provider-mssql/sql"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )

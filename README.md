@@ -17,7 +17,7 @@ terraform {
   required_providers {
     mssql = {
       versions = "~> 0.2"
-      source = "betr-io/mssql"
+      source = "ValeruS/mssql"
     }
   }
 }
@@ -30,7 +30,7 @@ provider "mssql" {}
 Clone the repository
 
 ```shell
-git clone git@github.com:betr-io/terraform-provider-mssql
+git clone git@github.com:ValeruS/terraform-provider-mssql
 ```
 
 Enter the provider directory and build the provider
