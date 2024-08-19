@@ -1,15 +1,16 @@
 package mssql
 
 import (
-  "context"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-  "github.com/pkg/errors"
-  "strings"
-  "github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"context"
+	"strings"
+
+	"github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"github.com/betr-io/terraform-provider-mssql/mssql/validate"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pkg/errors"
 )
 
-const loginNameProp = "login_name"
 const defaultDatabaseProp = "default_database"
 const defaultDatabaseDefault = "master"
 const defaultLanguageProp = "default_language"
@@ -43,11 +44,13 @@ func resourceLogin() *schema.Resource {
         Type:     schema.TypeString,
         Required: true,
         ForceNew: true,
+        ValidateFunc: validate.SQLIdentifier,
       },
       passwordProp: {
         Type:      schema.TypeString,
         Required:  true,
         Sensitive: true,
+        ValidateFunc: validate.SQLIdentifierPassword,
       },
       sidStrProp: {
         Type:     schema.TypeString,
@@ -76,8 +79,10 @@ func resourceLogin() *schema.Resource {
       },
     },
     Timeouts: &schema.ResourceTimeout{
-      Default: defaultTimeout,
+      Create: defaultTimeout,
       Read: defaultTimeout,
+      Update: defaultTimeout,
+      Delete: defaultTimeout,
     },
   }
 }

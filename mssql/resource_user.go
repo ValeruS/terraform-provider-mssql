@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"github.com/betr-io/terraform-provider-mssql/mssql/validate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
@@ -38,6 +39,7 @@ func resourceUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			objectIdProp: {
 				Type:     schema.TypeString,
@@ -48,12 +50,15 @@ func resourceUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				ConflictsWith: []string{passwordProp},
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			passwordProp: {
 				Type:      schema.TypeString,
 				Optional:  true,
 				ForceNew:  true,
 				Sensitive: true,
+				ValidateFunc: validate.SQLIdentifierPassword,
 			},
 			sidStrProp: {
 				Type:     schema.TypeString,
@@ -71,6 +76,7 @@ func resourceUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  defaultSchemaPropDefault,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			defaultLanguageProp: {
 				Type:     schema.TypeString,
@@ -88,8 +94,10 @@ func resourceUser() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
+			Create: defaultTimeout,
 			Read: defaultTimeout,
+			Update: defaultTimeout,
+			Delete: defaultTimeout,
 		},
 	}
 }
@@ -114,9 +122,6 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
 	roles := data.Get(rolesProp).(*schema.Set).List()
 
-	if loginName != "" && password != "" {
-		return diag.Errorf(loginNameProp + " and " + passwordProp + " cannot both be set")
-	}
 	var authType string
 	if loginName != "" {
 		authType = "INSTANCE"
@@ -124,9 +129,6 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 		authType = "DATABASE"
 	} else {
 		authType = "EXTERNAL"
-	}
-	if defaultSchema == "" {
-		return diag.Errorf(defaultSchemaProp + " cannot be empty")
 	}
 
 	connector, err := getUserConnector(meta, data)
@@ -325,12 +327,4 @@ func getUserConnector(meta interface{}, data *schema.ResourceData) (UserConnecto
 		return nil, err
 	}
 	return connector.(UserConnector), nil
-}
-
-func toStringSlice(values []interface{}) []string {
-	result := make([]string, len(values))
-	for i, v := range values {
-		result[i] = v.(string)
-	}
-	return result
 }

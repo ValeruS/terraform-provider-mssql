@@ -1,19 +1,20 @@
 package mssql
 
 import (
-  "bytes"
-  "context"
-  sql2 "database/sql"
-  "fmt"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-  "os"
-  "strconv"
-  "github.com/betr-io/terraform-provider-mssql/mssql/model"
-  "github.com/betr-io/terraform-provider-mssql/sql"
-  "testing"
-  "text/template"
-  "time"
+	"bytes"
+	"context"
+	sql2 "database/sql"
+	"fmt"
+	"os"
+	"strconv"
+	"testing"
+	"text/template"
+	"time"
+
+	"github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"github.com/betr-io/terraform-provider-mssql/sql"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 var runLocalAccTests bool
@@ -61,6 +62,12 @@ type Check struct {
 type TestConnector interface {
   GetLogin(name string) (*model.Login, error)
   GetUser(database, name string) (*model.User, error)
+  GetDatabasePermissions(database, name string) (*model.DatabasePermissions, error)
+  GetDatabaseRole(database, name string) (*model.DatabaseRole, error)
+  GetDatabaseSchema(database, name string) (*model.DatabaseSchema, error)
+  GetDatabaseCredential(database, name string) (*model.DatabaseCredential, error)
+  GetAzureExternalDatasource(database, name string) (*model.AzureExternalDatasource, error)
+  GetDatabaseMasterkey(database string) (*model.DatabaseMasterkey, error)
   GetSystemUser() (string, error)
   GetCurrentUser(database string) (string, string, error)
 }
@@ -156,6 +163,30 @@ func (t testConnector) GetLogin(name string) (*model.Login, error) {
 
 func (t testConnector) GetUser(database, name string) (*model.User, error) {
   return t.c.(UserConnector).GetUser(context.Background(), database, name)
+}
+
+func (t testConnector) GetDatabasePermissions(database, name string) (*model.DatabasePermissions, error) {
+  return t.c.(DatabasePermissionsConnector).GetDatabasePermissions(context.Background(), database, name)
+}
+
+func (t testConnector) GetDatabaseRole(database string, roleName string) (*model.DatabaseRole, error) {
+  return t.c.(DatabaseRoleConnector).GetDatabaseRole(context.Background(), database, roleName)
+}
+
+func (t testConnector) GetDatabaseSchema(database string, schemaName string) (*model.DatabaseSchema, error) {
+  return t.c.(DatabaseSchemaConnector).GetDatabaseSchema(context.Background(), database, schemaName)
+}
+
+func (t testConnector) GetDatabaseCredential(database, credentialName string) (*model.DatabaseCredential, error) {
+  return t.c.(DatabaseCredentialConnector).GetDatabaseCredential(context.Background(), database, credentialName)
+}
+
+func (t testConnector) GetAzureExternalDatasource(database, datasourceName string) (*model.AzureExternalDatasource, error) {
+  return t.c.(AzureExternalDatasourceConnector).GetAzureExternalDatasource(context.Background(), database, datasourceName)
+}
+
+func (t testConnector) GetDatabaseMasterkey(database string) (*model.DatabaseMasterkey, error) {
+  return t.c.(DatabaseMasterkeyConnector).GetDatabaseMasterkey(context.Background(), database)
 }
 
 func (t testConnector) GetSystemUser() (string, error) {

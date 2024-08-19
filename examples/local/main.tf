@@ -113,3 +113,90 @@ output "login" {
   }
   sensitive = true
 }
+
+data "mssql_login" "example" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  login_name = mssql_login.example.login_name
+
+  depends_on = [mssql_login.example]
+}
+
+output "datalogin" {
+  value = {
+    principal_id = data.mssql_login.example.principal_id
+    sid          = data.mssql_login.example.sid
+  }
+}
+
+resource "mssql_database_role" "example" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  database = "master"
+  role_name = "testrole"
+}
+
+resource "mssql_database_role" "example_authorization" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  database = "example-db"
+  role_name = "example-role"
+  owner_name = mssql_user.example.username
+}
+
+resource "mssql_database_permissions" "example" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  database    = "example"
+  username    = "username"
+  permissions = [
+    "EXECUTE",
+    "UPDATE",
+    "INSERT",
+  ]
+}
+
+resource "mssql_database_schema" "example" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  database = "master"
+  schema_name = "testschema"
+}
+
+resource "mssql_database_schema" "example_authorization" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  database = "example-db"
+  schema_name = "example-schema"
+  owner_name = mssql_user.example.username
+}

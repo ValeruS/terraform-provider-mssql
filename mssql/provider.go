@@ -1,17 +1,18 @@
 package mssql
 
 import (
-  "context"
-  "fmt"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-  "github.com/rs/zerolog"
-  "github.com/rs/zerolog/log"
-  "io"
-  "os"
-  "github.com/betr-io/terraform-provider-mssql/mssql/model"
-  "github.com/betr-io/terraform-provider-mssql/sql"
-  "time"
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"time"
+
+	"github.com/betr-io/terraform-provider-mssql/mssql/model"
+	"github.com/betr-io/terraform-provider-mssql/sql"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type mssqlProvider struct {
@@ -46,8 +47,22 @@ func Provider(factory model.ConnectorFactory) *schema.Provider {
     ResourcesMap: map[string]*schema.Resource{
       "mssql_login": resourceLogin(),
       "mssql_user":  resourceUser(),
+      "mssql_database_permissions": resourceDatabasePermissions(),
+      "mssql_database_role": resourceDatabaseRole(),
+      "mssql_database_schema": resourceDatabaseSchema(),
+      "mssql_database_masterkey": resourceDatabaseMasterkey(),
+      "mssql_database_credential": resourceDatabaseCredential(),
+      "mssql_azure_external_datasource": resourceAzureExternalDatasource(),
     },
-    DataSourcesMap: map[string]*schema.Resource{},
+    DataSourcesMap: map[string]*schema.Resource{
+      "mssql_login": dataSourceLogin(),
+      "mssql_user": dataSourceUser(),
+      "mssql_database_permissions": dataSourceDatabasePermissions(),
+      "mssql_database_role": dataSourceDatabaseRole(),
+      "mssql_database_schema": dataSourceDatabaseSchema(),
+      "mssql_database_credential": datasourceDatabaseCredential(),
+      "mssql_azure_external_datasource": datasourceAzureExternalDatasource(),
+    },
     ConfigureContextFunc: func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
       return providerConfigure(ctx, data, factory)
     },
