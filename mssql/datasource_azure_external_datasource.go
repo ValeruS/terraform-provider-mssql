@@ -2,6 +2,7 @@ package mssql
 
 import (
 	"context"
+	"strings"
 
 	"github.com/betr-io/terraform-provider-mssql/mssql/validate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -74,6 +75,14 @@ func datasourceAzureExternalDatasourceRead(ctx context.Context, data *schema.Res
 	connector, err := getAzureExternalDatasourceConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	mssqlversion, err := connector.GetMSSQLVersion(ctx)
+	if err != nil {
+			return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
+	}
+	if !strings.Contains(mssqlversion, "Microsoft SQL Azure") {
+		return diag.Errorf("Error: The database is not an Azure SQL Database.")
 	}
 
 	datasource, err := connector.GetAzureExternalDatasource(ctx, database, datasourcename)

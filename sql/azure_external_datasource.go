@@ -7,6 +7,24 @@ import (
 	"github.com/betr-io/terraform-provider-mssql/mssql/model"
 )
 
+func (c *Connector) GetMSSQLVersion(ctx context.Context) (string, error) {
+	var version string
+	err := c.
+			QueryRowContext(ctx,
+					"SELECT @@VERSION",
+					func(r *sql.Row) error {
+							return r.Scan(&version)
+					},
+			)
+	if err != nil {
+			if err == sql.ErrNoRows {
+					return "", nil
+			}
+			return "", err
+	}
+	return version, nil
+}
+
 func (c *Connector) GetAzureExternalDatasource(ctx context.Context, database, datasourcename string) (*model.AzureExternalDatasource, error) {
 	var extds model.AzureExternalDatasource
 	var rdbname sql.NullString

@@ -86,6 +86,7 @@ func resourceAzureExternalDatasource() *schema.Resource {
 }
 
 type AzureExternalDatasourceConnector interface {
+	GetMSSQLVersion(ctx context.Context) (string, error)
 	CreateAzureExternalDatasource(ctx context.Context, database, datasourcename, location, credentialname, typedesc, rdatabasename string) error
 	GetAzureExternalDatasource(ctx context.Context, database, datasourcename string) (*model.AzureExternalDatasource, error)
 	UpdateAzureExternalDatasource(ctx context.Context, database, datasourcename, location, credentialname, rdatabasename string) error
@@ -112,6 +113,14 @@ func resourceAzureExternalDatasourceCreate(ctx context.Context, data *schema.Res
 		return diag.FromErr(err)
 	}
 
+	mssqlversion, err := connector.GetMSSQLVersion(ctx)
+	if err != nil {
+			return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
+	}
+	if !strings.Contains(mssqlversion, "Microsoft SQL Azure") {
+		return diag.Errorf("The database is not an Azure SQL Database.")
+	}
+
 	if err = connector.CreateAzureExternalDatasource(ctx, database, datasourcename, location, credentialname, typedesc, rdatabasename); err != nil {
 		return diag.FromErr(errors.Wrapf(err, "unable to create external data source [%s] on database [%s]", datasourcename, database))
 	}
@@ -133,6 +142,14 @@ func resourceAzureExternalDatasourceRead(ctx context.Context, data *schema.Resou
 	connector, err := getAzureExternalDatasourceConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	mssqlversion, err := connector.GetMSSQLVersion(ctx)
+	if err != nil {
+			return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
+	}
+	if !strings.Contains(mssqlversion, "Microsoft SQL Azure") {
+		return diag.Errorf("The database is not an Azure SQL Database.")
 	}
 
 	extdatasource, err := connector.GetAzureExternalDatasource(ctx, database, datasourcename)
@@ -249,6 +266,14 @@ func resourceAzureExternalDatasourceImport(ctx context.Context, data *schema.Res
 	connector, err := getAzureExternalDatasourceConnector(meta, data)
 	if err != nil {
 		return nil, err
+	}
+
+	mssqlversion, err := connector.GetMSSQLVersion(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to get MSSQL version")
+	}
+	if !strings.Contains(mssqlversion, "Microsoft SQL Azure") {
+		return nil, errors.Wrapf(err, "The database is not an Azure SQL Database.")
 	}
 
 	extdatasource, err := connector.GetAzureExternalDatasource(ctx, database, datasourcename)
