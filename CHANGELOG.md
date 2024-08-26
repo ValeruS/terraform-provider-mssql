@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2024 08-26
+
+### Changed
+
+- Renamed `mssql_external_datasource` to `mssql_azure_external_datasource`
+
+### Changed
+
+- Improve `mssql_azure_external_datasource` to check mssql version
+- Added import for `mssql_azure_external_datasource`
+- Added AccTest for Validation Password
+
 ## [0.3.5] - 2024-03-25
 
 ### Added
