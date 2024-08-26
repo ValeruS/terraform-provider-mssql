@@ -2,6 +2,7 @@ package mssql
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
@@ -55,6 +56,7 @@ func resourceDatabasePermissions() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Default: defaultTimeout,
+			Read: defaultTimeout,
 		},
 	}
 }
@@ -73,6 +75,7 @@ func resourceDatabasePermissionsCreate(ctx context.Context, data *schema.Resourc
 	database := data.Get(databaseProp).(string)
 	username := data.Get(usernameProp).(string)
 	permissions := data.Get(permissionsProp).(*schema.Set).List()
+	permissions_, _ := json.Marshal(permissions)
 
 	connector, err := getDatabasePermissionsConnector(meta, data)
 	if err != nil {
@@ -85,12 +88,12 @@ func resourceDatabasePermissionsCreate(ctx context.Context, data *schema.Resourc
 		Permissions:  toStringSlice(permissions),
 	}
 	if err = connector.CreateDatabasePermissions(ctx, dbPermissionModel); err != nil {
-		return diag.FromErr(errors.Wrapf(err, "unable to create database permissions [%s] on database [%s] for user [%s]", permissions, database, username))
+		return diag.FromErr(errors.Wrapf(err, "unable to create database permissions %v on database [%s] for user [%s]", string(permissions_), database, username))
 	}
 
 	data.SetId(getDatabasePermissionsID(data))
 
-	logger.Info().Msgf("created database permissions [%s] on database [%s] for user [%s]", permissions, database, username)
+	logger.Info().Msgf("created database permissions %v on database [%s] for user [%s]", string(permissions_), database, username)
 
 	return resourceDatabasePermissionsRead(ctx, data, meta)
 }
@@ -154,10 +157,9 @@ func resourceDatabasePermissionDelete(ctx context.Context, data *schema.Resource
 		return diag.FromErr(errors.Wrapf(err, "unable to delete permissions for user [%s] on database [%s]", username, database))
 	}
 
-	logger.Info().Msgf("deleted permissions for user [%s] on database [%s]", username, database)
-
-	// d.SetId("") is automatically called assuming delete returns no errors, but it is added here for explicitness.
 	data.SetId("")
+
+	logger.Info().Msgf("deleted permissions for user [%s] on database [%s]", username, database)
 
 	return nil
 }

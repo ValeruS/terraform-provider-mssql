@@ -1,45 +1,33 @@
-# mssql_database_credential
+-> Functionality is limited to Azure SQL Database only for RDBMS or BLOB_STORAGE type
 
-The `mssql_database_credential` resource create a database credential on a SQL Server.
+# mssql_azure_external_datasource (Data Source)
+
+The `mssql_azure_external_datasource` obtains information about external data source on an Azure SQL Datatbase.
+
 
 ## Example Usage
 
 ```hcl
-resource "mssql_database_masterkey" "name" {
+data "mssql_azure_external_datasource" "rdbms" {
   server {
     host = "example-sql-server.database.windows.net"
     azure_login {
-      tenant_id     = tenant_id
-      client_id     = client_id
-      client_secret = client_secret
+      tenant_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      client_secret = "terriblySecretSecret"
     }
   }
-
-  database = "dbname"
-  password = "strongpassword"
-}
-
-resource "mssql_database_credential" "example" {
-  server {
-    host = "example-sql-server.database.windows.net"
-    azure_login {}
-  }
-  database        = "example-db"
-  credential_name = "example-credential-name"
-  identity_name   = "example-identity"
-  secret          = "strong secret"
+  database             = "example_db"
+  data_source_name     = "example_name"
 }
 ```
-
 ## Argument Reference
 
 The following arguments are supported:
 
-* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below. Changing this forces a new resource to be created.
-* `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
-* `credential_name` - (Required) Specifies the name of the database scoped credential being created. Changing this forces a new resource to be created.
-* `identity_name` - (Required) Specifies the name of the account to be used when connecting outside the server. Changing this resource property modifies the existing resource.
-* `secret` - (Optional) Specifies the secret required for outgoing authentication. Changing this resource property modifies the existing resource.
+* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
+* `database` - (Required) The name of the database to operate on.
+* `data_source_name` - (Required) The external data source name.
 
 The `server` block supports the following arguments:
 
@@ -71,20 +59,9 @@ The `azuread_managed_identity_auth` block supports the following arguments:
 
 The following attributes are exported:
 
-* `principal_id` - The principal id of this database scoped credential.
-* `credential_id` - The id of this database scoped credential.
+* `data_source_id` - The id of this data source name.
 * `credential_name` - The name of the database scoped credential.
-* `identity_name` - The name of the account.
-
-## Import
-
-Before importing `mssql_database_credential`, you must to configure the authentication to your sql server:
-
-1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
-2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
-
-After that you can import the SQL Server database scoped credential using the server URL and `credential name`, e.g.
-
-```shell
-terraform import mssql_database_credential.example 'mssql://example-sql-server.database.windows.net/example-db/credential_name'
-```
+* `credential_id` - The id of the database scoped credential.
+* `location` - The connectivity protocol and path to the external data source.
+* `type` - The `type` of a database-scoped credential for authenticating to the external data source.
+* `remote_database_name` - The name of the remote database on the server provided using `location`.

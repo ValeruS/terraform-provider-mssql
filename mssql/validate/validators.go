@@ -7,27 +7,9 @@ import (
 
 func SQLIdentifier(i interface{}, k string) (warnings []string, errors []error) {
 	v := i.(string)
-	if match, _ := regexp.Match("^[a-zA-Z_@#][a-zA-Z\\.\\d@$#_-]*$", []byte(v)); !match {
+	if (!regexp.MustCompile(`^[a-zA-Z0-9_.@#-]+$`).MatchString(v)) && (!regexp.MustCompile("SHARED ACCESS SIGNATURE").MatchString(v)) {
 		errors = append(errors, fmt.Errorf(
 			"invalid SQL identifier. SQL identifier allows letters, digits, @, $, #, . or _, start with letter, _, @ or # .Got %q", v))
-	}
-
-	if 1 > len(v) {
-		errors = append(errors, fmt.Errorf("%q cannot be less than 1 character: %q", k, v))
-	}
-
-	if len(v) > 128 {
-		errors = append(errors, fmt.Errorf("%q cannot be longer than 128 characters: %q %d", k, v, len(v)))
-	}
-
-	return
-}
-
-func SQLIdentifierName(i interface{}, k string) (warnings []string, errors []error) {
-	v := i.(string)
-	if (!regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(v)) && (!regexp.MustCompile("SHARED ACCESS SIGNATURE").MatchString(v)) {
-		errors = append(errors, fmt.Errorf(
-			"any combination of alphanumeric characters including hyphens and underscores are allowed in %q: %q", k, v))
 	}
 
 	if 1 > len(v) {
@@ -49,12 +31,12 @@ func SQLIdentifierPassword(i interface{}, k string) (warnings []string, errors [
 	}
 
 	if len(v) < 8 {
-		errors = append(errors, fmt.Errorf("length should equal to or greater than %d, got %q", 8, v))
+		errors = append(errors, fmt.Errorf("length should equal to or greater than %d, got %d", 8, len(v)))
 		return
 	}
 
 	if len(v) > 128 {
-		errors = append(errors, fmt.Errorf("length should be equal to or less than %d, got %q", 128, v))
+		errors = append(errors, fmt.Errorf("length should be equal to or less than %d, got %d", 128, len(v)))
 		return
 	}
 
@@ -73,7 +55,7 @@ func SQLIdentifierPassword(i interface{}, k string) (warnings []string, errors [
 	}
 }
 
-func SQLExternalDatasourceType(i interface{}, k string) (warnings []string, errors []error) {
+func SQLAzureExternalDatasourceType(i interface{}, k string) (warnings []string, errors []error) {
 	v := i.(string)
 	found := false
 	for _, w := range []string{"BLOB_STORAGE", "RDBMS"} {

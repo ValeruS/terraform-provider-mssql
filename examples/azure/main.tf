@@ -313,8 +313,8 @@ resource "mssql_database_permissions" "example" {
       client_secret = azuread_service_principal_password.sa.value
     }
   }
-  database     = "example"
-  principal_id = 1
+  database    = "example"
+  username    = "username"
   permissions = [
     "EXECUTE",
     "UPDATE",

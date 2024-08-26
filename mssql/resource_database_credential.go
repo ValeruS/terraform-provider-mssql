@@ -44,7 +44,7 @@ func resourceDatabaseCredential() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
-				ValidateFunc: validate.SQLIdentifierName,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			identitynameProp: {
 				Type:     schema.TypeString,
@@ -67,7 +67,10 @@ func resourceDatabaseCredential() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
+			Create: defaultTimeout,
+			Read: defaultTimeout,
+			Update: defaultTimeout,
+			Delete: defaultTimeout,
 		},
 	}
 }
@@ -182,10 +185,9 @@ func resourceDatabaseCredentialDelete(ctx context.Context, data *schema.Resource
 		return diag.FromErr(errors.Wrapf(err, "unable to delete database scoped credential [%s] on database [%s]", credentialname, database))
 	}
 
-	logger.Info().Msgf("deleted database scoped credential [%s] on database [%s]", credentialname, database)
-
-	// d.SetId("") is automatically called assuming delete returns no errors, but it is added here for explicitness.
 	data.SetId("")
+
+	logger.Info().Msgf("deleted database scoped credential [%s] on database [%s]", credentialname, database)
 
 	return nil
 }
@@ -231,6 +233,7 @@ func resourceDatabaseCredentialImport(ctx context.Context, data *schema.Resource
 	if scopedcredential == nil {
 		return nil, errors.Errorf("database scoped credential [%s] on database [%s] does not exist",credentialname, database)
 	}
+
 	if err = data.Set(credentialNameProp, scopedcredential.CredentialName); err != nil {
 		return nil, err
 	}

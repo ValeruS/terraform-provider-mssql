@@ -3,6 +3,7 @@ package mssql
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -34,6 +35,21 @@ func TestAccLogin_Local_Basic(t *testing.T) {
 					resource.TestCheckResourceAttr("mssql_login.basic", "server.0.azure_login.#", "0"),
 					resource.TestCheckResourceAttrSet("mssql_login.basic", "principal_id"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccLogin_Local_Basic_Pass_Validate_Length(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckLogin(t, "basic_pass_validate", false, map[string]interface{}{"login_name": "login_basic_pass_length", "password": "shotpas"}),
+				ExpectError: regexp.MustCompile("length should equal to or greater than 8"),
 			},
 		},
 	})
@@ -281,16 +297,16 @@ func TestAccLogin_Azure_UpdatePassword(t *testing.T) {
 
 func testAccCheckLogin(t *testing.T, name string, azure bool, data map[string]interface{}) string {
 	text := `resource "mssql_login" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{ if .azure }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 login_name = "{{ .login_name }}"
-						 password   = "{{ .password }}"
-						 {{ with .sid }}sid = "{{ . }}"{{ end }}
-						 {{ with .default_database }}default_database = "{{ . }}"{{ end }}
-						 {{ with .default_language }}default_language = "{{ . }}"{{ end }}
-					 }`
+				server {
+					host = "{{ .host }}"
+					{{ if .azure }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				login_name = "{{ .login_name }}"
+				password   = "{{ .password }}"
+				{{ with .sid }}sid = "{{ . }}"{{ end }}
+				{{ with .default_database }}default_database = "{{ . }}"{{ end }}
+				{{ with .default_language }}default_language = "{{ . }}"{{ end }}
+			}`
 	data["name"] = name
 	data["azure"] = azure
 	if azure {

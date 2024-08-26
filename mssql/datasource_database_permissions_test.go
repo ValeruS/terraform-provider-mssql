@@ -38,48 +38,77 @@ func TestAccDataDatabasePermissions_Local_Basic(t *testing.T) {
 	})
 }
 
+func TestAccDataDatabasePermissions_Azure_Basic(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDataDatabasePermissionsDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckDataDataBasepermissions(t, "data_azure_test", "azure", map[string]interface{}{"database": "testdb", "username": "azure_user_perm", "permissions": "[\"INSERT\", \"UPDATE\"]", "login_name": "azure_login_perm", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/azure_user_perm/permissions"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "database", "testdb"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "permissions.#", "2"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "permissions.0", "INSERT"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "permissions.1", "UPDATE"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "server.#", "1"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "server.0.port", "1433"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "server.0.azure_login.#", "1"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "server.0.azure_login.0.tenant_id", os.Getenv("MSSQL_TENANT_ID")),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "server.0.azure_login.0.client_id", os.Getenv("MSSQL_CLIENT_ID")),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "server.0.azure_login.0.client_secret", os.Getenv("MSSQL_CLIENT_SECRET")),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "server.0.login.#", "0"),
+					resource.TestCheckResourceAttrSet("data.mssql_database_permissions.data_azure_test", "principal_id"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckDataDataBasepermissions(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `{{ if .login_name }}
-					 resource "mssql_login" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 login_name = "{{ .login_name }}"
-						 password   = "{{ .login_password }}"
-					 }
-					 {{ end }}
-					 resource "mssql_user" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 {{ with .database }}database = "{{ . }}"{{ end }}
-						 {{ with .username }}username = "{{ . }}"{{ end }}
-						 {{ with .password }}password = "{{ . }}"{{ end }}
-						 {{ with .login_name }}login_name = "{{ . }}"{{ end }}
-						 {{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
-						 {{ with .default_language }}default_language = "{{ . }}"{{ end }}
-						 {{ with .roles }}roles = {{ . }}{{ end }}
-					 }
-					 resource "mssql_database_permissions" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 database     = "{{ .database }}"
-						 username = mssql_user.{{ .name }}.username
-						 permissions  = {{ .permissions }}
-						}
-					 data "mssql_database_permissions" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 database     = "{{ .database }}"
-						 username = mssql_user.{{ .name }}.username
-						 depends_on = [mssql_database_permissions.{{ .name }}]
-					 }`
+				resource "mssql_login" "{{ .name }}" {
+					server {
+						host = "{{ .host }}"
+						{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+					}
+					login_name = "{{ .login_name }}"
+					password   = "{{ .login_password }}"
+				}
+			{{ end }}
+			resource "mssql_user" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				{{ with .database }}database = "{{ . }}"{{ end }}
+				{{ with .username }}username = "{{ . }}"{{ end }}
+				{{ with .password }}password = "{{ . }}"{{ end }}
+				{{ with .login_name }}login_name = "{{ . }}"{{ end }}
+				{{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
+				{{ with .default_language }}default_language = "{{ . }}"{{ end }}
+				{{ with .roles }}roles = {{ . }}{{ end }}
+			}
+			resource "mssql_database_permissions" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database     = "{{ .database }}"
+				username = mssql_user.{{ .name }}.username
+				permissions  = {{ .permissions }}
+			}
+			data "mssql_database_permissions" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database     = "{{ .database }}"
+				username = mssql_user.{{ .name }}.username
+				depends_on = [mssql_database_permissions.{{ .name }}]
+			}`
 
 	data["name"] = name
 	data["login"] = login

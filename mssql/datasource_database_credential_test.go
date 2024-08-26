@@ -39,33 +39,33 @@ func TestAccDataDatabaseCredential_Azure_Basic(t *testing.T) {
 
 func testAccCheckDataCredential(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `resource "mssql_database_masterkey" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 database = "{{ .database }}"
-						 password = "{{ .password }}"
-					 }
-					 resource "mssql_database_credential" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 database = "{{ .database }}"
-						 credential_name = "{{ .credential_name }}"
-						 identity_name = "{{ .identity_name }}"
-						 {{ with .secret }}secret = "{{ . }}"{{ end }}
-						 depends_on = [mssql_database_masterkey.{{ .name }}]
-						}
-					 data "mssql_database_credential" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 database = "{{ .database }}"
-						 credential_name = "{{ .credential_name }}"
-						 depends_on = [mssql_database_credential.{{ .name }}]
-					 }`
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database = "{{ .database }}"
+				password = "{{ .password }}"
+			}
+			resource "mssql_database_credential" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database = "{{ .database }}"
+				credential_name = "{{ .credential_name }}"
+				identity_name = "{{ .identity_name }}"
+				{{ with .secret }}secret = "{{ . }}"{{ end }}
+				depends_on = [mssql_database_masterkey.{{ .name }}]
+			}
+			data "mssql_database_credential" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database = "{{ .database }}"
+				credential_name = "{{ .credential_name }}"
+				depends_on = [mssql_database_credential.{{ .name }}]
+			}`
 
 	data["name"] = name
 	data["login"] = login

@@ -10,7 +10,7 @@ terraform {
       version = "~> 3.85"
     }
     mssql = {
-      source  = "ValeruS/mssql"
+      source  = "valerus/mssql"
       version = "~> 0.2"
     }
     random = {

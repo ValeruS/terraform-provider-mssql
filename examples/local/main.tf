@@ -6,7 +6,7 @@ terraform {
       version = "~> 3.0"
     }
     mssql = {
-      source  = "ValeruS/mssql"
+      source  = "valerus/mssql"
       version = "~> 0.2"
     }
     random = {
@@ -167,8 +167,8 @@ resource "mssql_database_permissions" "example" {
       password = local.local_password
     }
   }
-  database     = "example"
-  principal_id = 1
+  database    = "example"
+  username    = "username"
   permissions = [
     "EXECUTE",
     "UPDATE",

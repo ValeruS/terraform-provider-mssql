@@ -75,7 +75,8 @@ func resourceUser() *schema.Resource {
 			defaultSchemaProp: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
+				Default:  defaultSchemaPropDefault,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			defaultLanguageProp: {
 				Type:     schema.TypeString,
@@ -93,7 +94,10 @@ func resourceUser() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
+			Create: defaultTimeout,
+			Read: defaultTimeout,
+			Update: defaultTimeout,
+			Delete: defaultTimeout,
 		},
 	}
 }
@@ -126,8 +130,6 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 	} else {
 		authType = "EXTERNAL"
 	}
-
-	if defaultSchema == "" {defaultSchema = "dbo"}
 
 	connector, err := getUserConnector(meta, data)
 	if err != nil {

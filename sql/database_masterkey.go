@@ -28,8 +28,8 @@ func (c *Connector) GetDatabaseMasterkey(ctx context.Context, database string) (
 
 func (c *Connector) CreateDatabaseMasterkey(ctx context.Context, database, password string) error {
 	cmd := `DECLARE @stmt nvarchar(max)
-					SET @stmt = 'CREATE MASTER KEY ENCRYPTION BY PASSWORD = ' + QuoteName(@password, '''')
-					EXEC (@stmt)`
+			SET @stmt = 'CREATE MASTER KEY ENCRYPTION BY PASSWORD = ' + QuoteName(@password, '''')
+			EXEC (@stmt)`
 	return c.
 		setDatabase(&database).
 		ExecContext(ctx, cmd,
@@ -39,8 +39,8 @@ func (c *Connector) CreateDatabaseMasterkey(ctx context.Context, database, passw
 
 func (c *Connector) UpdateDatabaseMasterkey(ctx context.Context, database, password string) error {
 	cmd := `DECLARE @stmt nvarchar(max)
-					SET @stmt = 'ALTER MASTER KEY REGENERATE WITH ENCRYPTION BY PASSWORD = ' + QuoteName(@password, '''')
-					EXEC (@stmt)`
+			SET @stmt = 'ALTER MASTER KEY REGENERATE WITH ENCRYPTION BY PASSWORD = ' + QuoteName(@password, '''')
+			EXEC (@stmt)`
 	return c.
 		setDatabase(&database).
 		ExecContext(ctx, cmd,
@@ -50,9 +50,9 @@ func (c *Connector) UpdateDatabaseMasterkey(ctx context.Context, database, passw
 
 func (c *Connector) DeleteDatabaseMasterkey(ctx context.Context, database string) error {
 	cmd := `DECLARE @stmt nvarchar(max)
-					SET @stmt = 'IF EXISTS (SELECT 1 FROM [sys].[symmetric_keys] WHERE name = ' + QuoteName('##MS_DatabaseMasterKey##', '''') + ') ' +
-											'DROP MASTER KEY'
-					EXEC (@stmt)`
+			SET @stmt = 'IF EXISTS (SELECT 1 FROM [sys].[symmetric_keys] WHERE name = ' + QuoteName('##MS_DatabaseMasterKey##', '''') + ') ' +
+						'DROP MASTER KEY'
+			EXEC (@stmt)`
 	return c.
 	setDatabase(&database).
 		ExecContext(ctx, cmd,

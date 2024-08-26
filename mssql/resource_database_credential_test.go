@@ -16,22 +16,22 @@ func TestAccDatabaseCredential_Azure_Basic(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseCredemtialDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckDatabaseCredential(t, "local_test_credential", "azure", map[string]interface{}{"database": "testdb", "credential_name": "test_scoped_cred", "identity_name": "test_identity_name", "secret": "V3ryS3cretP@asswd", "password": "V3ryS3cretP@asswd!Key"}),
+				Config: testAccCheckDatabaseCredential(t, "test_credential", "azure", map[string]interface{}{"database": "testdb", "credential_name": "test_scoped_cred", "identity_name": "test_identity_name", "secret": "V3ryS3cretP@asswd", "password": "V3ryS3cretP@asswd!Key"}),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckDatabaseCredemtialExists("mssql_database_credential.local_test_credential"),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "database", "testdb"),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "credential_name", "test_scoped_cred"),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "identity_name", "test_identity_name"),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "server.#", "1"),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "server.0.port", "1433"),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "server.0.azure_login.#", "1"),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "server.0.azure_login.0.tenant_id", os.Getenv("MSSQL_TENANT_ID")),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "server.0.azure_login.0.client_id", os.Getenv("MSSQL_CLIENT_ID")),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "server.0.azure_login.0.client_secret", os.Getenv("MSSQL_CLIENT_SECRET")),
-					resource.TestCheckResourceAttr("mssql_database_credential.local_test_credential", "server.0.login.#", "0"),
-					resource.TestCheckResourceAttrSet("mssql_database_credential.local_test_credential", "principal_id"),
-					resource.TestCheckResourceAttrSet("mssql_database_credential.local_test_credential", "credential_id"),
+					testAccCheckDatabaseCredemtialExists("mssql_database_credential.test_credential"),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "database", "testdb"),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "credential_name", "test_scoped_cred"),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "identity_name", "test_identity_name"),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "server.#", "1"),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "server.0.port", "1433"),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "server.0.azure_login.#", "1"),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "server.0.azure_login.0.tenant_id", os.Getenv("MSSQL_TENANT_ID")),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "server.0.azure_login.0.client_id", os.Getenv("MSSQL_CLIENT_ID")),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "server.0.azure_login.0.client_secret", os.Getenv("MSSQL_CLIENT_SECRET")),
+					resource.TestCheckResourceAttr("mssql_database_credential.test_credential", "server.0.login.#", "0"),
+					resource.TestCheckResourceAttrSet("mssql_database_credential.test_credential", "principal_id"),
+					resource.TestCheckResourceAttrSet("mssql_database_credential.test_credential", "credential_id"),
 				),
 			},
 		},
@@ -88,24 +88,24 @@ func TestAccDatabaseCredential_Azure_Basic_update(t *testing.T) {
 
 func testAccCheckDatabaseCredential(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `resource "mssql_database_masterkey" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 database = "{{ .database }}"
-						 password = "{{ .password }}"
-					 }
-					 resource "mssql_database_credential" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 database = "{{ .database }}"
-						 credential_name = "{{ .credential_name }}"
-						 identity_name = "{{ .identity_name }}"
-						 {{ with .secret }}secret = "{{ . }}"{{ end }}
-						 depends_on = [mssql_database_masterkey.{{ .name }}]
-					 }`
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database = "{{ .database }}"
+				password = "{{ .password }}"
+			}
+			resource "mssql_database_credential" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database = "{{ .database }}"
+				credential_name = "{{ .credential_name }}"
+				identity_name = "{{ .identity_name }}"
+				{{ with .secret }}secret = "{{ . }}"{{ end }}
+				depends_on = [mssql_database_masterkey.{{ .name }}]
+			}`
 
 	data["name"] = name
 	data["login"] = login

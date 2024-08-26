@@ -38,7 +38,7 @@ func resourceDatabaseRole() *schema.Resource {
 			roleNameProp: {
 				Type:        schema.TypeString,
 				Required:    true,
-				ValidateFunc: validate.SQLIdentifierName,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			ownerNameProp: {
 				Type:     schema.TypeString,
@@ -58,7 +58,10 @@ func resourceDatabaseRole() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
+			Create: defaultTimeout,
+			Read: defaultTimeout,
+			Update: defaultTimeout,
+			Delete: defaultTimeout,
 		},
 	}
 }
@@ -150,7 +153,6 @@ func resourceDatabaseRoleDelete(ctx context.Context, data *schema.ResourceData, 
 		return diag.FromErr(errors.Wrapf(err, "unable to delete role [%s].[%s]", database, roleName))
 	}
 
-	// d.SetId("") is automatically called assuming delete returns no errors, but it is added here for explicitness.
 	data.SetId("")
 
 	logger.Info().Msgf("deleted role [%s].[%s]", database, roleName)

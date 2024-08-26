@@ -2,6 +2,7 @@ package mssql
 
 import (
 	"context"
+	"strings"
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -9,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func datasourceExternalDatasource() *schema.Resource {
+func datasourceAzureExternalDatasource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: datasourceExternalDatasourceRead,
+		ReadContext: datasourceAzureExternalDatasourceRead,
 		Schema: map[string]*schema.Schema{
 			serverProp: {
 				Type:     schema.TypeList,
@@ -29,9 +30,9 @@ func datasourceExternalDatasource() *schema.Resource {
 			},
 			datasourcenameProp: {
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 				ForceNew: true,
-				ValidateFunc: validate.SQLIdentifierName,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			datasourceIdProp: {
 				Type:     schema.TypeInt,
@@ -59,24 +60,32 @@ func datasourceExternalDatasource() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
+			Read: defaultTimeout,
 		},
 	}
 }
 
-func datasourceExternalDatasourceRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	logger := loggerFromMeta(meta, "externaldatasource", "read")
+func datasourceAzureExternalDatasourceRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	logger := loggerFromMeta(meta, "azureexternaldatasource", "read")
 	logger.Debug().Msgf("Read %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	datasourcename := data.Get(datasourcenameProp).(string)
 
-	connector, err := getExternalDatasourceConnector(meta, data)
+	connector, err := getAzureExternalDatasourceConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	datasource, err := connector.GetExternalDatasource(ctx, database, datasourcename)
+	mssqlversion, err := connector.GetMSSQLVersion(ctx)
+	if err != nil {
+			return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
+	}
+	if !strings.Contains(mssqlversion, "Microsoft SQL Azure") {
+		return diag.Errorf("Error: The database is not an Azure SQL Database.")
+	}
+
+	datasource, err := connector.GetAzureExternalDatasource(ctx, database, datasourcename)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "unable to read external data source [%s] on database [%s]", datasourcename, database))
 	}
@@ -105,7 +114,7 @@ func datasourceExternalDatasourceRead(ctx context.Context, data *schema.Resource
 		if err = data.Set(rdatabasenameProp, datasource.RDatabaseName); err != nil {
 			return diag.FromErr(err)
 		}
-		data.SetId(getDatabaseCredentialID(data))
+		data.SetId(getAzureExternalDatasourceID(data))
 	}
 
 	return nil

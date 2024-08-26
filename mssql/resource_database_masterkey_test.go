@@ -36,6 +36,33 @@ func TestAccDatabaseMasterkey_Local_Basic(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseMasterkey_Azure_Basic(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseMasterkeyDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckDatabaseMasterkey(t, "azure_test_masterkey", "azure", map[string]interface{}{"database": "testdb", "password": "V3ryS3cretP@asswd"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseMasterkeyExists("mssql_database_masterkey.azure_test_masterkey"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "database", "testdb"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "server.#", "1"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "server.0.port", "1433"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "server.0.azure_login.#", "1"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "server.0.azure_login.0.tenant_id", os.Getenv("MSSQL_TENANT_ID")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "server.0.azure_login.0.client_id", os.Getenv("MSSQL_CLIENT_ID")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "server.0.azure_login.0.client_secret", os.Getenv("MSSQL_CLIENT_SECRET")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_test_masterkey", "server.0.login.#", "0"),
+					resource.TestCheckResourceAttrSet("mssql_database_masterkey.azure_test_masterkey", "principal_id"),
+					resource.TestCheckResourceAttrSet("mssql_database_masterkey.azure_test_masterkey", "key_guid"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseMasterkey_Local_Basic_update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -79,15 +106,59 @@ func TestAccDatabaseMasterkey_Local_Basic_update(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseMasterkey_Azure_Basic_update(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseMasterkeyDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckDatabaseMasterkey(t, "azure_update", "azure", map[string]interface{}{"database": "testdb", "password": "V3ryS3cretP@asswd"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseMasterkeyExists("mssql_database_masterkey.azure_update"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "database", "testdb"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.#", "1"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.port", "1433"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.azure_login.#", "1"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.azure_login.0.tenant_id", os.Getenv("MSSQL_TENANT_ID")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.azure_login.0.client_id", os.Getenv("MSSQL_CLIENT_ID")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.azure_login.0.client_secret", os.Getenv("MSSQL_CLIENT_SECRET")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.login.#", "0"),
+					resource.TestCheckResourceAttrSet("mssql_database_masterkey.azure_update", "principal_id"),
+					resource.TestCheckResourceAttrSet("mssql_database_masterkey.azure_update", "key_guid"),
+				),
+			},
+			{
+				Config: testAccCheckDatabaseMasterkey(t, "azure_update", "azure", map[string]interface{}{"database": "testdb", "password": "V3ryS3cretP@asswdUpdated123"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseMasterkeyExists("mssql_database_masterkey.azure_update"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "database", "testdb"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.#", "1"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.port", "1433"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.azure_login.#", "1"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.azure_login.0.tenant_id", os.Getenv("MSSQL_TENANT_ID")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.azure_login.0.client_id", os.Getenv("MSSQL_CLIENT_ID")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.azure_login.0.client_secret", os.Getenv("MSSQL_CLIENT_SECRET")),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.azure_update", "server.0.login.#", "0"),
+					resource.TestCheckResourceAttrSet("mssql_database_masterkey.azure_update", "principal_id"),
+					resource.TestCheckResourceAttrSet("mssql_database_masterkey.azure_update", "key_guid"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckDatabaseMasterkey(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `resource "mssql_database_masterkey" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 database = "{{ .database }}"
-						 password = "{{ .password }}"
-					 }`
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database = "{{ .database }}"
+				password = "{{ .password }}"
+			}`
 
 	data["name"] = name
 	data["login"] = login

@@ -65,22 +65,22 @@ func TestAccDataDatabaseRole_Azure_Basic(t *testing.T) {
 
 func testAccCheckDataRole(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `resource "mssql_database_role" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 {{ with .database }}database = "{{ . }}"{{ end }}
-						 role_name = "{{ .role_name }}"
-					 }
-					 data "mssql_database_role" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 {{ with .database }}database = "{{ . }}"{{ end }}
-						 role_name = "{{ .role_name }}"
-						 depends_on = [mssql_database_role.{{ .name }}]
-					 }`
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				{{ with .database }}database = "{{ . }}"{{ end }}
+				role_name = "{{ .role_name }}"
+			}
+			data "mssql_database_role" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				{{ with .database }}database = "{{ . }}"{{ end }}
+				role_name = "{{ .role_name }}"
+				depends_on = [mssql_database_role.{{ .name }}]
+			}`
 
 	data["name"] = name
 	data["login"] = login

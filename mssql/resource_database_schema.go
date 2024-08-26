@@ -39,7 +39,7 @@ func resourceDatabaseSchema() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
-				ValidateFunc: validate.SQLIdentifierName,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			ownerNameProp: {
 				Type:     schema.TypeString,
@@ -59,7 +59,10 @@ func resourceDatabaseSchema() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
+			Create: defaultTimeout,
+			Read: defaultTimeout,
+			Update: defaultTimeout,
+			Delete: defaultTimeout,
 		},
 	}
 }
@@ -151,7 +154,6 @@ func resourceDatabaseSchemaDelete(ctx context.Context, data *schema.ResourceData
 		return diag.FromErr(errors.Wrapf(err, "unable to delete schema [%s].[%s]", database, schemaName))
 	}
 
-	// d.SetId("") is automatically called assuming delete returns no errors, but it is added here for explicitness.
 	data.SetId("")
 
 	logger.Info().Msgf("deleted schema [%s].[%s]", database, schemaName)

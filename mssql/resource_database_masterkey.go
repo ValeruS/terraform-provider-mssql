@@ -74,7 +74,10 @@ func resourceDatabaseMasterkey() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
+			Create: defaultTimeout,
+			Read: defaultTimeout,
+			Update: defaultTimeout,
+			Delete: defaultTimeout,
 		},
 	}
 }
@@ -193,10 +196,9 @@ func resourceDatabaseMasterkeyDelete(ctx context.Context, data *schema.ResourceD
 		return diag.FromErr(errors.Wrapf(err, "unable to delete database master key on database [%s]", database))
 	}
 
-	logger.Info().Msgf("deleted database master key on database [%s]", database)
-
-	// d.SetId("") is automatically called assuming delete returns no errors, but it is added here for explicitness.
 	data.SetId("")
+
+	logger.Info().Msgf("deleted database master key on database [%s]", database)
 
 	return nil
 }

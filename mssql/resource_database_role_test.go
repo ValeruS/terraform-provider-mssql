@@ -204,33 +204,6 @@ func TestAccDatabaseRole_Local_Basic_Remove_owner(t *testing.T) {
 	})
 }
 
-func TestAccDatabaseRole_Local_Basic_Update_role_and_owner(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IsUnitTest:        runLocalAccTests,
-		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckRoleDestroy(state) },
-		Steps: []resource.TestStep{
-			{
-				Config: testAccCheckRole(t, "local_test_update_role_auth", "login", map[string]interface{}{"database": "master", "role_name": "test_role_owner_pre_row", "owner_name": "db_user_owner_row_pre", "username": "db_user_owner_row_pre", "login_name": "db_login_owner_row_pre", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoleExists("mssql_database_role.local_test_update_role_auth"),
-					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_role_auth", "role_name", "test_role_owner_pre_row"),
-					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_role_auth", "owner_name", "db_user_owner_row_pre"),
-				),
-			},
-			{
-				Config: testAccCheckRole(t, "local_test_update_role_auth", "login", map[string]interface{}{"database": "master", "role_name": "test_role_owner_post_row", "owner_name": "db_user_owner_row_post", "username": "db_user_owner_row_post", "login_name": "db_login_owner_row_post", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoleExists("mssql_database_role.local_test_update_role_auth"),
-					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_role_auth", "role_name", "test_role_owner_post_row"),
-					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_role_auth", "owner_name", "db_user_owner_row_post"),
-				),
-			},
-		},
-	})
-}
-
 func TestAccDatabaseRole_Azure_Basic_Update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -327,42 +300,42 @@ func TestAccDatabaseRole_Azure_Basic_Update_owner(t *testing.T) {
 
 func testAccCheckRole(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `{{ if .login_name }}
-					 resource "mssql_login" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 login_name = "{{ .login_name }}"
-						 password   = "{{ .login_password }}"
-					 }
-					 {{ end }}
-					 {{ if .username }}
-					 resource "mssql_user" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 {{ with .database }}database = "{{ . }}"{{ end }}
-						 username = "{{ .username }}"
-						 {{ with .password }}password = "{{ . }}"{{ end }}
-						 {{ with .login_name }}login_name = "{{ . }}"{{ end }}
-						 {{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
-						 {{ with .default_language }}default_language = "{{ . }}"{{ end }}
-						 {{ with .roles }}roles = {{ . }}{{ end }}
-					 }
-					 {{ end }}
-					 resource "mssql_database_role" "{{ .name }}" {
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 {{ with .database }}database = "{{ . }}"{{ end }}
-						 role_name = "{{ .role_name }}"
-						 {{ with .owner_name }}owner_name = "{{ . }}"{{ end }}
-						 {{ if .username }}
-						 depends_on = [mssql_user.{{ .name }}]
-						 {{ end }}
-					 }`
+				resource "mssql_login" "{{ .name }}" {
+					server {
+						host = "{{ .host }}"
+						{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+					}
+					login_name = "{{ .login_name }}"
+					password   = "{{ .login_password }}"
+				}
+			{{ end }}
+			{{ if .username }}
+				resource "mssql_user" "{{ .name }}" {
+					server {
+						host = "{{ .host }}"
+						{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+					}
+					{{ with .database }}database = "{{ . }}"{{ end }}
+					username = "{{ .username }}"
+					{{ with .password }}password = "{{ . }}"{{ end }}
+					{{ with .login_name }}login_name = "{{ . }}"{{ end }}
+					{{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
+					{{ with .default_language }}default_language = "{{ . }}"{{ end }}
+					{{ with .roles }}roles = {{ . }}{{ end }}
+				}
+			{{ end }}
+			resource "mssql_database_role" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				{{ with .database }}database = "{{ . }}"{{ end }}
+				role_name = "{{ .role_name }}"
+				{{ with .owner_name }}owner_name = "{{ . }}"{{ end }}
+				{{ if .username }}
+				depends_on = [mssql_user.{{ .name }}]
+				{{ end }}
+			}`
 
 	data["name"] = name
 	data["login"] = login

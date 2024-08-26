@@ -62,7 +62,7 @@ func getDatabaseMasterkeyID(data *schema.ResourceData) string {
 	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, "masterkey")
 }
 
-func getExternalDatasourceID(data *schema.ResourceData) string {
+func getAzureExternalDatasourceID(data *schema.ResourceData) string {
 	host := data.Get(serverProp + ".0.host").(string)
 	port := data.Get(serverProp + ".0.port").(string)
 	database := data.Get(databaseProp).(string)

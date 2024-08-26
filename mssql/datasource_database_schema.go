@@ -31,7 +31,7 @@ func dataSourceDatabaseSchema() *schema.Resource {
 				Type:        schema.TypeString,
 				Required: true,
 				ForceNew: true,
-				ValidateFunc: validate.SQLIdentifierName,
+				ValidateFunc: validate.SQLIdentifier,
 			},
 			ownerNameProp: {
 				Type:     schema.TypeString,
@@ -47,7 +47,7 @@ func dataSourceDatabaseSchema() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
+			Read: defaultTimeout,
 		},
 	}
 }
