@@ -1,8 +1,7 @@
 package mssql
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
@@ -78,9 +77,8 @@ func getDatabaseSQLScriptID(data *schema.ResourceData) string {
 	database := data.Get(databaseProp).(string)
 	verifyObject := data.Get(verifyObjectProp).(string)
 	id := fmt.Sprintf("%s:%s", database, verifyObject)
-	hash := sha256.Sum256([]byte(id))
-	uniqueID := hex.EncodeToString(hash[:])
-	return fmt.Sprintf("sqlserver://%s:%s/%s/sqlscript/%s", host, port, database, uniqueID)
+	encodedID := base64.URLEncoding.EncodeToString([]byte(id))
+	return fmt.Sprintf("sqlserver://%s:%s/%s/sqlscript/%s", host, port, database, encodedID)
 }
 
 func loggerFromMeta(meta interface{}, resource, function string) zerolog.Logger {

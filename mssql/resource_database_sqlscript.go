@@ -2,10 +2,8 @@ package mssql
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
@@ -36,35 +34,11 @@ func resourceDatabaseSQLScript() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			scriptProp: {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ExactlyOneOf:  []string{scriptProp, scriptFileProp},
-				ConflictsWith: []string{scriptFileProp},
-				ValidateFunc:  validation.StringIsNotEmpty,
-				StateFunc: func(v interface{}) string {
-					hash := sha256.Sum256([]byte(v.(string)))
-					return hex.EncodeToString(hash[:])
-				},
-			},
-			scriptFileProp: {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ExactlyOneOf:  []string{scriptFileProp, scriptProp},
-				ConflictsWith: []string{scriptProp},
-				ValidateFunc:  validation.StringIsNotEmpty,
-				StateFunc: func(v interface{}) string {
-					if v == nil {
-						return ""
-					}
-					filePath := v.(string)
-					content, err := os.ReadFile(filePath)
-					if err != nil {
-						return filePath
-					}
-					hash := sha256.Sum256(content)
-					return hex.EncodeToString(hash[:])
-				},
+			sqlscriptProp: {
+				Type:         schema.TypeString,
+				Required:     true,
+				Sensitive:    true,
+				ValidateFunc: validation.StringIsBase64,
 			},
 			verifyObjectProp: {
 				Type:        schema.TypeString,
@@ -84,26 +58,17 @@ func resourceDatabaseSQLScript() *schema.Resource {
 			},
 		},
 		CustomizeDiff: func(ctx context.Context, data *schema.ResourceDiff, i interface{}) error {
-			if data.Get(scriptProp) == "" && data.Get(scriptFileProp) == "" {
-				return errors.New("either script or script_file must be specified")
-			}
-
 			// Get verify_object value
 			verifyObject := data.Get(verifyObjectProp).(string)
 			if verifyObject == "" {
 				return nil
 			}
 
-			// Get the script content
-			var scriptContent string
-			if script := data.Get(scriptProp).(string); script != "" {
-				scriptContent = script
-			} else if scriptFile := data.Get(scriptFileProp).(string); scriptFile != "" {
-				content, err := os.ReadFile(scriptFile)
-				if err != nil {
-					return errors.Wrapf(err, "failed to read script file: %s", scriptFile)
-				}
-				scriptContent = string(content)
+			// Get the sqlscript content and decode from base64
+			scriptBase64 := data.Get(sqlscriptProp).(string)
+			scriptContent, err := base64.StdEncoding.DecodeString(scriptBase64)
+			if err != nil {
+				return errors.Wrap(err, "failed to decode base64 sqlscript")
 			}
 
 			// Parse verify_object to get type and name
@@ -121,7 +86,7 @@ func resourceDatabaseSQLScript() *schema.Resource {
 			doubleName := fmt.Sprintf("\"%s\"", objectName)
 
 			// Convert script to lowercase for case-insensitive matching
-			scriptLower := strings.ToLower(scriptContent)
+			scriptLower := strings.ToLower(string(scriptContent))
 			objectTypeLower := strings.ToLower(objectType)
 			objectNameLower := strings.ToLower(objectName)
 			quotedNameLower := strings.ToLower(quotedName)
@@ -183,22 +148,14 @@ type DatabaseSQLScriptConnector interface {
 	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
 
-// getScript retrieves the SQL script content either from the script attribute
-// or from the script file if specified
+// getScript retrieves the SQL script content from the script attribute and decodes it from base64
 func getScript(data *schema.ResourceData) (string, error) {
-	if script := data.Get(scriptProp).(string); script != "" {
-		return script, nil
+	script := data.Get(sqlscriptProp).(string)
+	decoded, err := base64.StdEncoding.DecodeString(script)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to decode base64 sqlscript")
 	}
-
-	if scriptFile := data.Get(scriptFileProp).(string); scriptFile != "" {
-		content, err := os.ReadFile(scriptFile)
-		if err != nil {
-			return "", errors.Wrapf(err, "failed to read script file: %s", scriptFile)
-		}
-		return string(content), nil
-	}
-
-	return "", errors.New("either script or script_file must be specified")
+	return string(decoded), nil
 }
 
 // getObjectExistsQuery generates a SQL query to check if an object exists
@@ -386,7 +343,7 @@ func resourceDatabaseSQLScriptUpdate(ctx context.Context, data *schema.ResourceD
 	logger.Debug().Msgf("Update %s", data.Id())
 
 	// Only run if script content has changed
-	if !data.HasChange(scriptProp) && !data.HasChange(scriptFileProp) {
+	if !data.HasChange(sqlscriptProp) {
 		return nil
 	}
 

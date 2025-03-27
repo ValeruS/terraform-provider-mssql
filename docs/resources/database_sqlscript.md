@@ -15,16 +15,16 @@ resource "mssql_database_sqlscript" "create_table" {
       client_secret = "terriblySecretSecret"
     }
   }
-  
-  database = "MyDatabase"
-  script = <<-SQL
+
+  database  = "MyDatabase"
+  sqlscript = base64encode(<<-SQL
     CREATE TABLE Users (
       ID INT PRIMARY KEY,
       Name NVARCHAR(100),
       Email NVARCHAR(255)
     )
   SQL
-  
+  )
   verify_object = "TABLE Users"
 }
 
@@ -37,9 +37,9 @@ resource "mssql_database_sqlscript" "setup_stored_proc" {
       password = "password123"
     }
   }
-  
+
   database      = "MyDatabase"
-  script_file   = "scripts/stored_procedure.sql"
+  sqlscript     = filebase64("scripts/stored_procedure.sql")
   verify_object = "PROCEDURE GetUsers"
 }
 ```
@@ -49,9 +49,8 @@ resource "mssql_database_sqlscript" "setup_stored_proc" {
 The following arguments are supported:
 
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
-* `database` - (Required) The name of the database where the script will be executed.
-* `script` - (Required if `script_file` is not set) The SQL script to execute. Conflicts with `script_file`.
-* `script_file` - (Required if `script` is not set) Path to a file containing the SQL script to execute. Conflicts with `script`.
+* `database` - (Required) The name of the database where the script will be executed. Changing this forces a new resource to be created.
+* `sqlscript` - (Required) The SQL script to execute. Must be in base64 format.
 * `verify_object` - (Required) Object to verify existence after script execution. Format: 'TYPE NAME' (e.g., 'TABLE Users'). Supported types:
     * `TABLE`
     * `VIEW`
@@ -97,5 +96,4 @@ In addition to the arguments listed above, the following computed attributes are
 1. The script is executed exactly as provided, so ensure proper error handling and idempotency in your SQL scripts.
 2. The `verify_object` field is used to check if the script execution was successful by verifying the existence of a specific database object.
 3. On deletion, no action is taken as the script has already been executed and the objects created by it remain in the database.
-4. The resource supports both inline scripts via the `script` argument and file-based scripts via the `script_file` argument.
-5. Either `script` or `script_file` must be specified, but not both. 
+4. The resource supports both inline scripts and file-based scripts.

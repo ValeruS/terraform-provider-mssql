@@ -1,8 +1,7 @@
 package mssql
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"testing"
@@ -11,12 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-// CalculateScriptHash returns the hex-encoded SHA256 hash of a script string.
-// This is useful for testing to match the StateFunc behavior of the script attribute.
-func CalculateScriptHash(script string) string {
-	hash := sha256.Sum256([]byte(script))
-	return hex.EncodeToString(hash[:])
-}
+var testScript = "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TestTable' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE TestTable (id INT) END"
+var base64testScript = base64.StdEncoding.EncodeToString([]byte(testScript))
 
 func TestAccDatabaseSQLScript_Local_Basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -26,11 +21,11 @@ func TestAccDatabaseSQLScript_Local_Basic(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseSQLScriptDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckDatabaseSQLScript(t, "local_test_sqlscript", "login", map[string]interface{}{"database": "master", "script": "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TestTable' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE TestTable (id INT) END", "verify_object": "TABLE TestTable"}),
+				Config: testAccCheckDatabaseSQLScript(t, "local_test_sqlscript", "login", map[string]interface{}{"database": "master", "sqlscript": base64testScript, "verify_object": "TABLE TestTable"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckDatabaseSQLScriptExists("mssql_database_sqlscript.local_test_sqlscript"),
 					resource.TestCheckResourceAttr("mssql_database_sqlscript.local_test_sqlscript", "database", "master"),
-					resource.TestCheckResourceAttr("mssql_database_sqlscript.local_test_sqlscript", "script", CalculateScriptHash("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TestTable' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE TestTable (id INT) END")),
+					resource.TestCheckResourceAttr("mssql_database_sqlscript.local_test_sqlscript", "sqlscript", base64testScript),
 					resource.TestCheckResourceAttr("mssql_database_sqlscript.local_test_sqlscript", "verify_object", "TABLE TestTable"),
 					resource.TestCheckResourceAttr("mssql_database_sqlscript.local_test_sqlscript", "server.#", "1"),
 					resource.TestCheckResourceAttr("mssql_database_sqlscript.local_test_sqlscript", "server.0.host", "localhost"),
@@ -52,11 +47,11 @@ func TestAccDatabaseSQLScript_Azure_Basic(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseSQLScriptDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckDatabaseSQLScript(t, "azure_test_sqlscript", "azure", map[string]interface{}{"database": "testdb", "script": "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TestTable' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE TestTable (id INT) END", "verify_object": "TABLE TestTable"}),
+				Config: testAccCheckDatabaseSQLScript(t, "azure_test_sqlscript", "azure", map[string]interface{}{"database": "testdb", "sqlscript": base64testScript, "verify_object": "TABLE TestTable"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckDatabaseSQLScriptExists("mssql_database_sqlscript.azure_test_sqlscript"),
 					resource.TestCheckResourceAttr("mssql_database_sqlscript.azure_test_sqlscript", "database", "testdb"),
-					resource.TestCheckResourceAttr("mssql_database_sqlscript.azure_test_sqlscript", "script", CalculateScriptHash("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TestTable' AND schema_id = SCHEMA_ID('dbo')) BEGIN CREATE TABLE TestTable (id INT) END")),
+					resource.TestCheckResourceAttr("mssql_database_sqlscript.azure_test_sqlscript", "sqlscript", base64testScript),
 					resource.TestCheckResourceAttr("mssql_database_sqlscript.azure_test_sqlscript", "verify_object", "TABLE TestTable"),
 					resource.TestCheckResourceAttr("mssql_database_sqlscript.azure_test_sqlscript", "server.#", "1"),
 					resource.TestCheckResourceAttr("mssql_database_sqlscript.azure_test_sqlscript", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
@@ -79,7 +74,7 @@ func testAccCheckDatabaseSQLScript(t *testing.T, name string, login string, data
 					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				database      = "{{ .database }}"
-				script        = "{{ .script }}"
+				sqlscript     = "{{ .sqlscript }}"
 				verify_object = "{{ .verify_object }}"
 			}`
 
