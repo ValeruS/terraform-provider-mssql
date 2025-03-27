@@ -132,6 +132,60 @@ func TestAccUser_Azure_Database(t *testing.T) {
 	})
 }
 
+func TestAccUser_Azure_Database_Update_Password(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckUser(t, "azure_update", "azure", map[string]interface{}{"database": "testdb","username": "test_update_password", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUserExists("mssql_user.azure_update"),
+					testAccCheckDatabaseUserWorks("mssql_user.azure_update", "test_update_password", "valueIsH8kd$¡"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "database", "testdb"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "password", "valueIsH8kd$¡"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "roles.#", "1"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "roles.0", "db_owner"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.#", "1"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.port", "1433"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azure_login.#", "1"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azure_login.0.tenant_id", os.Getenv("MSSQL_TENANT_ID")),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azure_login.0.client_id", os.Getenv("MSSQL_CLIENT_ID")),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azure_login.0.client_secret", os.Getenv("MSSQL_CLIENT_SECRET")),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azuread_default_chain_auth.#", "0"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azuread_managed_identity_auth.#", "0"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.login.#", "0"),
+					resource.TestCheckResourceAttrSet("mssql_user.azure_update", "principal_id"),
+				),
+			},
+			{
+				Config: testAccCheckUser(t, "azure_update", "azure", map[string]interface{}{"database": "testdb","username": "test_update_password", "password": "valueIsH8kd$¡AAA", "roles": "[\"db_owner\"]"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUserExists("mssql_user.azure_update"),
+					testAccCheckDatabaseUserWorks("mssql_user.azure_update", "test_update_password", "valueIsH8kd$¡AAA"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "database", "testdb"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "password", "valueIsH8kd$¡AAA"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "roles.#", "1"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "roles.0", "db_owner"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.#", "1"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.port", "1433"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azure_login.#", "1"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azure_login.0.tenant_id", os.Getenv("MSSQL_TENANT_ID")),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azure_login.0.client_id", os.Getenv("MSSQL_CLIENT_ID")),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azure_login.0.client_secret", os.Getenv("MSSQL_CLIENT_SECRET")),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azuread_default_chain_auth.#", "0"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.azuread_managed_identity_auth.#", "0"),
+					resource.TestCheckResourceAttr("mssql_user.azure_update", "server.0.login.#", "0"),
+					resource.TestCheckResourceAttrSet("mssql_user.azure_update", "principal_id"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccUser_Azure_Database_Pass_Validate(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

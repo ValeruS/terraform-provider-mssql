@@ -34,7 +34,7 @@ func resourceUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "master",
+				Default:  defaultDatabaseDefault,
 			},
 			usernameProp: {
 				Type:         schema.TypeString,
@@ -66,7 +66,6 @@ func resourceUser() *schema.Resource {
 			passwordProp: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
 				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
 			},
@@ -105,7 +104,7 @@ func resourceUser() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: defaultTimeout,
-			Read: defaultTimeout,
+			Read:   defaultTimeout,
 			Update: defaultTimeout,
 			Delete: defaultTimeout,
 		},
@@ -240,6 +239,13 @@ func resourceUserUpdate(ctx context.Context, data *schema.ResourceData, meta int
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
 	roles := data.Get(rolesProp).(*schema.Set).List()
 
+	// Store the old password value in case we need to revert
+	var oldPassword string
+	if data.HasChange(passwordProp) {
+		oldValue, _ := data.GetChange(passwordProp)
+		oldPassword = oldValue.(string)
+	}
+
 	connector, err := getUserConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
@@ -251,7 +257,19 @@ func resourceUserUpdate(ctx context.Context, data *schema.ResourceData, meta int
 		DefaultLanguage: defaultLanguage,
 		Roles:           toStringSlice(roles),
 	}
+
+	// Only include password in the update if it has changed
+	if data.HasChange(passwordProp) {
+		user.Password = data.Get(passwordProp).(string)
+	}
+
 	if err = connector.UpdateUser(ctx, database, user); err != nil {
+		// If update fails and we were changing the password, revert the state
+		if data.HasChange(passwordProp) {
+			if err := data.Set(passwordProp, oldPassword); err != nil {
+				logger.Error().Err(err).Msg("Failed to revert password state after update error")
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update user [%s].[%s]", database, username))
 	}
 

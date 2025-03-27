@@ -75,7 +75,7 @@ The following arguments are supported:
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `database` - (Optional) The user will be created in this database. Defaults to `master`. Changing this forces a new resource to be created.
 * `username` - (Required) The name of the database user. Changing this forces a new resource to be created.
-* `password` - (Optional) The password of the database user. Conflicts with the `login_name` argument. Changing this forces a new resource to be created.
+* `password` - (Optional) The password of the database user. Conflicts with the `login_name` argument. Changing this resource property modifies the existing resource.
 * `login_name` - (Optional) The login name of the database user. This must refer to an existing SQL Server login name. Conflicts with the `password` argument. Changing this forces a new resource to be created.
 * `object_id` - (Optional) The Microsoft Entra Object ID (Azure AD Object ID) of the user, group, or service principal. Required when creating a user mapped to an Azure AD identity. This can be used instead of looking up the Azure AD identity by username. Changing this forces a new resource to be created.
 * `type` - (Optional) Specifies the type of a Microsoft Entra principal. `E` indicates the principal is a user or a service principal (an application or a managed identity). `X` indicates the principal is a group. Required when `object_id` is specified. Changing this forces a new resource to be created.

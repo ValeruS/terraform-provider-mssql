@@ -50,7 +50,7 @@ func SQLIdentifierPassword(i interface{}, k string) (warnings []string, errors [
 	case regexp.MustCompile(`^.*[A-Z]+.*$`).MatchString(v) && regexp.MustCompile(`^.*[\W]+.*$`).MatchString(v) && regexp.MustCompile(`^.*[0-9]+.*$`).MatchString(v):
 		return
 	default:
-		errors = append(errors, fmt.Errorf("%q must contain characters from three of the categories - uppercase letters, lowercase letters, numbers and non-alphanumeric characters, got %v", k, v))
+		errors = append(errors, fmt.Errorf("%q must contain characters from three of the categories - uppercase letters, lowercase letters, numbers and non-alphanumeric characters", k))
 		return
 	}
 }

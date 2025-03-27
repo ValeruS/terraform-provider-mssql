@@ -22,9 +22,9 @@ func resourceLogin() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			serverProp: {
-				Type:         schema.TypeList,
-				MaxItems:     1,
-				Required:     true,
+				Type:     schema.TypeList,
+				MaxItems: 1,
+				Required: true,
 				Elem: &schema.Resource{
 					Schema: getServerSchema(serverProp),
 				},
@@ -69,7 +69,7 @@ func resourceLogin() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: defaultTimeout,
-			Read: defaultTimeout,
+			Read:   defaultTimeout,
 			Update: defaultTimeout,
 			Delete: defaultTimeout,
 		},
@@ -154,14 +154,29 @@ func resourceLoginUpdate(ctx context.Context, data *schema.ResourceData, meta in
 	defaultDatabase := data.Get(defaultDatabaseProp).(string)
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
 
+	// Store the old password value in case we need to revert
+	var oldPassword string
+	if data.HasChange(passwordProp) {
+		oldValue, _ := data.GetChange(passwordProp)
+		oldPassword = oldValue.(string)
+	}
+
 	connector, err := getLoginConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if err = connector.UpdateLogin(ctx, loginName, password, defaultDatabase, defaultLanguage); err != nil {
+		// If update fails and we were changing the password, revert the state
+		if data.HasChange(passwordProp) {
+			if err := data.Set(passwordProp, oldPassword); err != nil {
+				logger.Error().Err(err).Msg("Failed to revert password state after update error")
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update login [%s]", loginName))
 	}
+
+	data.SetId(getLoginID(data))
 
 	logger.Info().Msgf("updated login [%s]", loginName)
 

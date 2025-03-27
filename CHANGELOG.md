@@ -17,7 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added optional parameter `type` ('E'|'X') when creating database users from Entra ID (formerly Azure AD) when object_id is specified
 - Improved resource handling to trigger recreation
+- Password updates for users (contained database) are now performed in-place instead of requiring resource recreation
 - Migrated authentication from ADAL (Azure Active Directory Authentication Library) to MSAL (Microsoft Authentication Library)
+
+### Fixed
+- Fixed issue where password updates were not properly triggering resource recreation when SQL-side password update failed
 
 ## [0.3.7]
 

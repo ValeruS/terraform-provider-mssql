@@ -50,7 +50,7 @@ The following arguments are supported:
 
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `database` - (Required) The name of the database where the script will be executed. Changing this forces a new resource to be created.
-* `sqlscript` - (Required) The SQL script to execute. Must be in base64 format.
+* `sqlscript` - (Required) The SQL script to execute. Must be in base64 format. Changing this resource property modifies the existing resource.
 * `verify_object` - (Required) Object to verify existence after script execution. Format: 'TYPE NAME' (e.g., 'TABLE Users'). Supported types:
     * `TABLE`
     * `VIEW`

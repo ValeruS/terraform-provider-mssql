@@ -197,6 +197,10 @@ func (c *Connector) UpdateUser(ctx context.Context, database string, user *model
 			DECLARE @language nvarchar(max) = @defaultLanguage
 			IF @language = '' SET @language = NULL
 			SET @stmt = @stmt + 'WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema)
+			IF @password != ''
+				BEGIN
+					SET @stmt = @stmt + ', PASSWORD = ' + QuoteName(@password, '''')
+				END
 			DECLARE @auth_type nvarchar(max) = (SELECT authentication_type_desc FROM [sys].[database_principals] WHERE name = @username)
 			IF NOT @@VERSION LIKE 'Microsoft SQL Azure%' AND @auth_type != 'INSTANCE'
 				BEGIN
@@ -264,6 +268,7 @@ func (c *Connector) UpdateUser(ctx context.Context, database string, user *model
 		ExecContext(ctx, cmd,
 			sql.Named("database", database),
 			sql.Named("username", user.Username),
+			sql.Named("password", user.Password),
 			sql.Named("defaultSchema", user.DefaultSchema),
 			sql.Named("defaultLanguage", user.DefaultLanguage),
 			sql.Named("roles", strings.Join(user.Roles, ",")),

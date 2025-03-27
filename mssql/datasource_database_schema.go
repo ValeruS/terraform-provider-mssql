@@ -25,7 +25,7 @@ func dataSourceDatabaseSchema() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "master",
+				Default:  defaultDatabaseDefault,
 			},
 			schemaNameProp: {
 				Type:         schema.TypeString,

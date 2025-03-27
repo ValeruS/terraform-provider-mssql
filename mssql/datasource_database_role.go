@@ -25,7 +25,7 @@ func dataSourceDatabaseRole() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "master",
+				Default:  defaultDatabaseDefault,
 			},
 			roleNameProp: {
 				Type:         schema.TypeString,

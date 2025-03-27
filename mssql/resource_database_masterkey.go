@@ -170,12 +170,25 @@ func resourceDatabaseMasterkeyUpdate(ctx context.Context, data *schema.ResourceD
 	database := data.Get(databaseProp).(string)
 	password := data.Get(passwordProp).(string)
 
+	// Store the old password value in case we need to revert
+	var oldPassword string
+	if data.HasChange(passwordProp) {
+		oldValue, _ := data.GetChange(passwordProp)
+		oldPassword = oldValue.(string)
+	}
+
 	connector, err := getDatabaseMasterkeyConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if err = connector.UpdateDatabaseMasterkey(ctx, database, password); err != nil {
+		// If update fails and we were changing the password, revert the state
+		if data.HasChange(passwordProp) {
+			if err := data.Set(passwordProp, oldPassword); err != nil {
+				logger.Error().Err(err).Msg("Failed to revert password state after update error")
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update database key on database [%s]", database))
 	}
 

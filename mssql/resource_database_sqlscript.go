@@ -358,7 +358,15 @@ func resourceDatabaseSQLScriptUpdate(ctx context.Context, data *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
+	// Store the old script value in case we need to revert
+	oldValue, _ := data.GetChange(sqlscriptProp)
+	oldScript := oldValue.(string)
+
 	if err := connector.DataBaseExecuteScript(ctx, database, script); err != nil {
+		// If script execution fails, revert the state to the old script value
+		if err := data.Set(sqlscriptProp, oldScript); err != nil {
+			logger.Error().Err(err).Msg("Failed to revert sqlscript state after execution error")
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to execute SQL script in database [%s]", database))
 	}
 
