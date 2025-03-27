@@ -144,7 +144,7 @@ func resourceDatabaseSQLScript() *schema.Resource {
 }
 
 type DatabaseSQLScriptConnector interface {
-	DataBaseExecuteScript(ctx context.Context, database string, script string) error
+	DataBaseExecuteScript(ctx context.Context, database string, sqlscript string) error
 	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
 
