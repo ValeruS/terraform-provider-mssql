@@ -7,24 +7,6 @@ import (
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 )
 
-func (c *Connector) GetMSSQLVersion(ctx context.Context) (string, error) {
-	var version string
-	err := c.
-			QueryRowContext(ctx,
-				"SELECT @@VERSION",
-				func(r *sql.Row) error {
-						return r.Scan(&version)
-				},
-			)
-	if err != nil {
-			if err == sql.ErrNoRows {
-					return "", nil
-			}
-			return "", err
-	}
-	return version, nil
-}
-
 func (c *Connector) GetAzureExternalDatasource(ctx context.Context, database, datasourcename string) (*model.AzureExternalDatasource, error) {
 	var extds model.AzureExternalDatasource
 	var rdbname sql.NullString
@@ -33,7 +15,7 @@ func (c *Connector) GetAzureExternalDatasource(ctx context.Context, database, da
 		QueryRowContext(ctx,
 		"SELECT eds.name, eds.data_source_id, eds.location, eds.type_desc, dsc.name, eds.credential_id, eds.database_name FROM [sys].[external_data_sources] eds INNER JOIN [sys].[database_scoped_credentials] dsc ON dsc.credential_id = eds.credential_id AND eds.name = @datasourcename",
 		func(r *sql.Row) error {
-			return r.Scan(&extds.DataSourceName, &extds.DataSourceId, &extds.Location, &extds.TypeDesc, &extds.CredentialName, &extds.CredentialId, &rdbname)
+			return r.Scan(&extds.DataSourceName, &extds.DataSourceId, &extds.Location, &extds.TypeStr, &extds.CredentialName, &extds.CredentialId, &rdbname)
 		},
 		sql.Named("datasourcename", datasourcename),
 	)
@@ -47,9 +29,9 @@ func (c *Connector) GetAzureExternalDatasource(ctx context.Context, database, da
 	return &extds, nil
 }
 
-func (c *Connector) CreateAzureExternalDatasource(ctx context.Context, database, datasourcename, location, credentialname, typedesc, rdatabasename string) error {
+func (c *Connector) CreateAzureExternalDatasource(ctx context.Context, database, datasourcename, location, credentialname, typestr, rdatabasename string) error {
 	cmd := `DECLARE @stmt nvarchar(max)
-			SET @stmt = 'CREATE EXTERNAL DATA SOURCE ' + QuoteName(@datasourcename) + ' WITH (LOCATION = ' + QuoteName(@location, '''') + ', CREDENTIAL = ' + QuoteName(@credentialname) + ', TYPE = ' + @typedesc
+			SET @stmt = 'CREATE EXTERNAL DATA SOURCE ' + QuoteName(@datasourcename) + ' WITH (LOCATION = ' + QuoteName(@location, '''') + ', CREDENTIAL = ' + QuoteName(@credentialname) + ', TYPE = ' + @typestr
 			IF @rdatabasename != ''
 				BEGIN
 					SET @stmt = @stmt + ', DATABASE_NAME = ' + QuoteName(@rdatabasename, '''')
@@ -62,7 +44,7 @@ func (c *Connector) CreateAzureExternalDatasource(ctx context.Context, database,
 			sql.Named("datasourcename", datasourcename),
 			sql.Named("location", location),
 			sql.Named("credentialname", credentialname),
-			sql.Named("typedesc", typedesc),
+			sql.Named("typestr", typestr),
 			sql.Named("rdatabasename", rdatabasename),
 		)
 }
@@ -91,7 +73,7 @@ func (c *Connector) DeleteAzureExternalDatasource(ctx context.Context, database,
 						'DROP EXTERNAL DATA SOURCE ' + QuoteName(@datasourcename)
 			EXEC (@stmt)`
 	return c.
-	setDatabase(&database).
+		setDatabase(&database).
 		ExecContext(ctx, cmd,
 			sql.Named("datasourcename", datasourcename),
 		)

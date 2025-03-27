@@ -54,7 +54,7 @@ func (c *Connector) DeleteDatabaseMasterkey(ctx context.Context, database string
 						'DROP MASTER KEY'
 			EXEC (@stmt)`
 	return c.
-	setDatabase(&database).
+		setDatabase(&database).
 		ExecContext(ctx, cmd,
 		)
 }

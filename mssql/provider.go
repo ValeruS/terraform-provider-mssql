@@ -46,13 +46,14 @@ func Provider(factory model.ConnectorFactory) *schema.Provider {
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"mssql_login": resourceLogin(),
-			"mssql_user":  resourceUser(),
+			"mssql_user": resourceUser(),
 			"mssql_database_permissions": resourceDatabasePermissions(),
 			"mssql_database_role": resourceDatabaseRole(),
 			"mssql_database_schema": resourceDatabaseSchema(),
 			"mssql_database_masterkey": resourceDatabaseMasterkey(),
 			"mssql_database_credential": resourceDatabaseCredential(),
 			"mssql_azure_external_datasource": resourceAzureExternalDatasource(),
+			"mssql_database_sqlscript": resourceDatabaseSQLScript(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"mssql_login": dataSourceLogin(),

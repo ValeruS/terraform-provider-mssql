@@ -1,6 +1,6 @@
 # mssql_database_role
 
-The `mssql_database_role` resource creates and manages a role on a SQL Server database.
+The `mssql_database_role` resource allows you to create and manage database-level roles in SQL Server.
 
 ## Example Usage
 

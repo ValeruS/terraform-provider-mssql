@@ -11,17 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const defaultDatabaseProp = "default_database"
-const defaultDatabaseDefault = "master"
-const defaultLanguageProp = "default_language"
-
-type LoginConnector interface {
-	CreateLogin(ctx context.Context, name, password, sid, defaultDatabase, defaultLanguage string) error
-	GetLogin(ctx context.Context, name string) (*model.Login, error)
-	UpdateLogin(ctx context.Context, name, password, defaultDatabase, defaultLanguage string) error
-	DeleteLogin(ctx context.Context, name string) error
-}
-
 func resourceLogin() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceLoginCreate,
@@ -41,15 +30,15 @@ func resourceLogin() *schema.Resource {
 				},
 			},
 			loginNameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			passwordProp: {
-				Type:      schema.TypeString,
-				Required:  true,
-				Sensitive: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
 			},
 			sidStrProp: {
@@ -87,6 +76,13 @@ func resourceLogin() *schema.Resource {
 	}
 }
 
+type LoginConnector interface {
+	CreateLogin(ctx context.Context, name, password, sid, defaultDatabase, defaultLanguage string) error
+	GetLogin(ctx context.Context, name string) (*model.Login, error)
+	UpdateLogin(ctx context.Context, name, password, defaultDatabase, defaultLanguage string) error
+	DeleteLogin(ctx context.Context, name string) error
+}
+
 func resourceLoginCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "login", "create")
 	logger.Debug().Msgf("Create %s", getLoginID(data))
@@ -115,7 +111,7 @@ func resourceLoginCreate(ctx context.Context, data *schema.ResourceData, meta in
 
 func resourceLoginRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "login", "read")
-	logger.Debug().Msgf("Read %s", getLoginID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	loginName := data.Get(loginNameProp).(string)
 
@@ -208,10 +204,10 @@ func resourceLoginImport(ctx context.Context, data *schema.ResourceData, meta in
 	}
 
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 2 {
+	if len(parts) != 3 {
 		return nil, errors.New("invalid ID")
 	}
-	if err = data.Set(loginNameProp, parts[1]); err != nil {
+	if err = data.Set(loginNameProp, parts[2]); err != nil {
 		return nil, err
 	}
 

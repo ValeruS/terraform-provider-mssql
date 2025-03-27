@@ -1,16 +1,46 @@
-# mssql_login
+# mssql_database_sqlscript
 
-The `mssql_login` resource creates and manages a login on a SQL Server.
+The `mssql_database_sqlscript` resource allows you to execute SQL scripts against a Microsoft SQL Server database. This resource is useful for managing database objects through SQL scripts, such as creating tables, views, stored procedures, or any other database objects.
 
 ## Example Usage
 
 ```hcl
-resource "mssql_login" "example" {
+# Execute an inline SQL script
+resource "mssql_database_sqlscript" "create_table" {
   server {
-    host = "example-sql-server.database.windows.net"
-    azure_login {}
+    host = "sqlserver.example.com"
+    azure_login {
+      tenant_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      client_secret = "terriblySecretSecret"
+    }
   }
-  login_name = "testlogin"
+  
+  database = "MyDatabase"
+  script = <<-SQL
+    CREATE TABLE Users (
+      ID INT PRIMARY KEY,
+      Name NVARCHAR(100),
+      Email NVARCHAR(255)
+    )
+  SQL
+  
+  verify_object = "TABLE Users"
+}
+
+# Execute a SQL script from a file
+resource "mssql_database_sqlscript" "setup_stored_proc" {
+  server {
+    host = "sqlserver.example.com"
+    login {
+      username = "admin"
+      password = "password123"
+    }
+  }
+  
+  database      = "MyDatabase"
+  script_file   = "scripts/stored_procedure.sql"
+  verify_object = "PROCEDURE GetUsers"
 }
 ```
 
@@ -19,11 +49,16 @@ resource "mssql_login" "example" {
 The following arguments are supported:
 
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
-* `login_name` - (Required) The name of the server login. Changing this forces a new resource to be created.
-* `password` - (Required) The password of the server login.
-* `sid` - (Optional) The SID (Security Identifier) in SQL Server is a unique identifier that represents a login at the server level. Changing this forces a new resource to be created.
-* `default_database` - (Optional) The default database of this server login. Defaults to `master`. This argument does not apply to Azure SQL Database.
-* `default_language` - (Optional) The default language of this server login. Defaults to `us_english`. This argument does not apply to Azure SQL Database.
+* `database` - (Required) The name of the database where the script will be executed.
+* `script` - (Required if `script_file` is not set) The SQL script to execute. Conflicts with `script_file`.
+* `script_file` - (Required if `script` is not set) Path to a file containing the SQL script to execute. Conflicts with `script`.
+* `verify_object` - (Required) Object to verify existence after script execution. Format: 'TYPE NAME' (e.g., 'TABLE Users'). Supported types:
+    * `TABLE`
+    * `VIEW`
+    * `PROCEDURE` or `PROC`
+    * `FUNCTION` or `FUNC`
+    * `SCHEMA`
+    * `TRIGGER` or `TRG`
 
 The `server` block supports the following arguments:
 
@@ -53,20 +88,14 @@ The `azuread_managed_identity_auth` block supports the following arguments:
 
 ## Attribute Reference
 
-The following attributes are exported:
+In addition to the arguments listed above, the following computed attributes are exported:
 
-* `principal_id` - The principal id of this server login.
-* `sid` - The security identifier (SID) of this login in String format.
+* `id` - The ID of the SQL script resource.
 
-## Import
+## Notes
 
-Before importing `mssql_login`, you must to configure the authentication to your sql server:
-
-1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
-2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
-
-After that you can import the SQL Server login using the server URL and `login name`, e.g.
-
-```shell
-terraform import mssql_login.example 'mssql://example-sql-server.database.windows.net/testlogin'
-```
+1. The script is executed exactly as provided, so ensure proper error handling and idempotency in your SQL scripts.
+2. The `verify_object` field is used to check if the script execution was successful by verifying the existence of a specific database object.
+3. On deletion, no action is taken as the script has already been executed and the objects created by it remain in the database.
+4. The resource supports both inline scripts via the `script` argument and file-based scripts via the `script_file` argument.
+5. Either `script` or `script_file` must be specified, but not both. 

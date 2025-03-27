@@ -1,6 +1,6 @@
 # mssql_database_permissions
 
-The `mssql_database_permissions` resource manages user permissions on a SQL Server.
+The `mssql_database_permissions` resource allows you to create and manage fine-grained database-level permissions for users in SQL Server.
 
 ## Example Usage
 

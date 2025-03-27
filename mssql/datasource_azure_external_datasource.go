@@ -29,9 +29,9 @@ func datasourceAzureExternalDatasource() *schema.Resource {
 				ForceNew: true,
 			},
 			datasourcenameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			datasourceIdProp: {
@@ -46,7 +46,7 @@ func datasourceAzureExternalDatasource() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			typedescProp: {
+			typeStrProp: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -79,7 +79,7 @@ func datasourceAzureExternalDatasourceRead(ctx context.Context, data *schema.Res
 
 	mssqlversion, err := connector.GetMSSQLVersion(ctx)
 	if err != nil {
-			return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
+		return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
 	}
 	if !strings.Contains(mssqlversion, "Microsoft SQL Azure") {
 		return diag.Errorf("Error: The database is not an Azure SQL Database.")
@@ -102,7 +102,7 @@ func datasourceAzureExternalDatasourceRead(ctx context.Context, data *schema.Res
 		if err = data.Set(locationProp, datasource.Location); err != nil {
 			return diag.FromErr(err)
 		}
-		if err = data.Set(typedescProp, datasource.TypeDesc); err != nil {
+		if err = data.Set(typeStrProp, datasource.TypeStr); err != nil {
 			return diag.FromErr(err)
 		}
 		if err = data.Set(credentialNameProp, datasource.CredentialName); err != nil {

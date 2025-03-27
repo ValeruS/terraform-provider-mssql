@@ -68,6 +68,7 @@ type TestConnector interface {
 	GetDatabaseCredential(database, name string) (*model.DatabaseCredential, error)
 	GetAzureExternalDatasource(database, name string) (*model.AzureExternalDatasource, error)
 	GetDatabaseMasterkey(database string) (*model.DatabaseMasterkey, error)
+	DataBaseExecuteScript(database string, script string) error
 	GetSystemUser() (string, error)
 	GetCurrentUser(database string) (string, string, error)
 }
@@ -187,6 +188,10 @@ func (t testConnector) GetAzureExternalDatasource(database, datasourceName strin
 
 func (t testConnector) GetDatabaseMasterkey(database string) (*model.DatabaseMasterkey, error) {
 	return t.c.(DatabaseMasterkeyConnector).GetDatabaseMasterkey(context.Background(), database)
+}
+
+func (t testConnector) DataBaseExecuteScript(database, script string) error {
+	return t.c.(DatabaseSQLScriptConnector).DataBaseExecuteScript(context.Background(), database, script)
 }
 
 func (t testConnector) GetSystemUser() (string, error) {

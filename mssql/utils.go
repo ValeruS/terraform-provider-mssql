@@ -1,6 +1,8 @@
 package mssql
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
@@ -12,7 +14,7 @@ func getLoginID(data *schema.ResourceData) string {
 	host := data.Get(serverProp + ".0.host").(string)
 	port := data.Get(serverProp + ".0.port").(string)
 	loginName := data.Get(loginNameProp).(string)
-	return fmt.Sprintf("sqlserver://%s:%s/%s", host, port, loginName)
+	return fmt.Sprintf("sqlserver://%s:%s/login/%s", host, port, loginName)
 }
 
 func getUserID(data *schema.ResourceData) string {
@@ -20,7 +22,7 @@ func getUserID(data *schema.ResourceData) string {
 	port := data.Get(serverProp + ".0.port").(string)
 	database := data.Get(databaseProp).(string)
 	username := data.Get(usernameProp).(string)
-	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, username)
+	return fmt.Sprintf("sqlserver://%s:%s/%s/user/%s", host, port, database, username)
 }
 
 func getDatabasePermissionsID(data *schema.ResourceData) string {
@@ -28,7 +30,7 @@ func getDatabasePermissionsID(data *schema.ResourceData) string {
 	port := data.Get(serverProp + ".0.port").(string)
 	database := data.Get(databaseProp).(string)
 	username := data.Get(usernameProp).(string)
-	return fmt.Sprintf("sqlserver://%s:%s/%s/%s/%s", host, port, database, username, "permissions")
+	return fmt.Sprintf("sqlserver://%s:%s/%s/permission/%s", host, port, database, username)
 }
 
 func getDatabaseRoleID(data *schema.ResourceData) string {
@@ -36,7 +38,7 @@ func getDatabaseRoleID(data *schema.ResourceData) string {
 	port := data.Get(serverProp + ".0.port").(string)
 	database := data.Get(databaseProp).(string)
 	roleName := data.Get(roleNameProp).(string)
-	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, roleName)
+	return fmt.Sprintf("sqlserver://%s:%s/%s/role/%s", host, port, database, roleName)
 }
 
 func getDatabaseSchemaID(data *schema.ResourceData) string {
@@ -44,7 +46,7 @@ func getDatabaseSchemaID(data *schema.ResourceData) string {
 	port := data.Get(serverProp + ".0.port").(string)
 	database := data.Get(databaseProp).(string)
 	schemaName := data.Get(schemaNameProp).(string)
-	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, schemaName)
+	return fmt.Sprintf("sqlserver://%s:%s/%s/schema/%s", host, port, database, schemaName)
 }
 
 func getDatabaseCredentialID(data *schema.ResourceData) string {
@@ -52,14 +54,14 @@ func getDatabaseCredentialID(data *schema.ResourceData) string {
 	port := data.Get(serverProp + ".0.port").(string)
 	database := data.Get(databaseProp).(string)
 	credentialname := data.Get(credentialNameProp).(string)
-	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, credentialname)
+	return fmt.Sprintf("sqlserver://%s:%s/%s/credential/%s", host, port, database, credentialname)
 }
 
 func getDatabaseMasterkeyID(data *schema.ResourceData) string {
 	host := data.Get(serverProp + ".0.host").(string)
 	port := data.Get(serverProp + ".0.port").(string)
 	database := data.Get(databaseProp).(string)
-	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, "masterkey")
+	return fmt.Sprintf("sqlserver://%s:%s/%s/masterkey", host, port, database)
 }
 
 func getAzureExternalDatasourceID(data *schema.ResourceData) string {
@@ -67,7 +69,18 @@ func getAzureExternalDatasourceID(data *schema.ResourceData) string {
 	port := data.Get(serverProp + ".0.port").(string)
 	database := data.Get(databaseProp).(string)
 	datasourcename := data.Get(datasourcenameProp).(string)
-	return fmt.Sprintf("sqlserver://%s:%s/%s/%s", host, port, database, datasourcename)
+	return fmt.Sprintf("sqlserver://%s:%s/%s/externaldatasource/%s", host, port, database, datasourcename)
+}
+
+func getDatabaseSQLScriptID(data *schema.ResourceData) string {
+	host := data.Get(serverProp + ".0.host").(string)
+	port := data.Get(serverProp + ".0.port").(string)
+	database := data.Get(databaseProp).(string)
+	verifyObject := data.Get(verifyObjectProp).(string)
+	id := fmt.Sprintf("%s:%s", database, verifyObject)
+	hash := sha256.Sum256([]byte(id))
+	uniqueID := hex.EncodeToString(hash[:])
+	return fmt.Sprintf("sqlserver://%s:%s/%s/sqlscript/%s", host, port, database, uniqueID)
 }
 
 func loggerFromMeta(meta interface{}, resource, function string) zerolog.Logger {
@@ -80,4 +93,23 @@ func toStringSlice(values []interface{}) []string {
 		result[i] = v.(string)
 	}
 	return result
+}
+
+func equal(a, b interface{}) bool {
+	switch a.(type) {
+	case []string:
+		aa := a.([]string)
+		bb := b.([]string)
+		if len(aa) != len(bb) {
+			return false
+		}
+		for i, v := range aa {
+			if v != bb[i] {
+				return false
+			}
+		}
+		return true
+	default:
+		return a == b
+	}
 }

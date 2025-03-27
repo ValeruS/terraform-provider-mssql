@@ -19,7 +19,7 @@ func TestAccDataUser_Local_Basic(t *testing.T) {
 			{
 				Config: testAccDataUser(t, "basic", "login", map[string]interface{}{"username": "instance", "login_name": "user_instance", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_user.basic", "id", "sqlserver://localhost:1433/master/instance"),
+					resource.TestCheckResourceAttr("data.mssql_user.basic", "id", "sqlserver://localhost:1433/master/user/instance"),
 					resource.TestCheckResourceAttr("data.mssql_user.basic", "database", "master"),
 					resource.TestCheckResourceAttr("data.mssql_user.basic", "username", "instance"),
 					resource.TestCheckResourceAttr("data.mssql_user.basic", "login_name", "user_instance"),
@@ -50,7 +50,7 @@ func TestAccDataUser_Azure_Basic(t *testing.T) {
 			{
 				Config: testAccDataUser(t, "basic", "azure", map[string]interface{}{"database": "testdb", "username": "instance", "login_name": "user_instance", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_user.basic", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/instance"),
+					resource.TestCheckResourceAttr("data.mssql_user.basic", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/user/instance"),
 					resource.TestCheckResourceAttr("data.mssql_user.basic", "database", "testdb"),
 					resource.TestCheckResourceAttr("data.mssql_user.basic", "username", "instance"),
 					resource.TestCheckResourceAttr("data.mssql_user.basic", "server.#", "1"),

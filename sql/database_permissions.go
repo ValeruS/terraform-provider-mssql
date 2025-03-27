@@ -21,7 +21,7 @@ func (c *Connector) GetDatabasePermissions(ctx context.Context, database string,
 	)
 
 	permsModel := model.DatabasePermissions{
-		UserName:  username,
+		UserName:     username,
 		DatabaseName: database,
 		Permissions:  make([]string, 0),
 	}
@@ -115,7 +115,7 @@ func (c *Connector) UpdateDatabasePermissions(ctx context.Context, permissions *
 			DEALLOCATE revoke_perm_cur
 			`
 	return c.
-	setDatabase(&permissions.DatabaseName).
+		setDatabase(&permissions.DatabaseName).
 		ExecContext(ctx, cmd,
 			sql.Named("username", permissions.UserName),
 			sql.Named("permissions", strings.Join(permissions.Permissions, ",")),
@@ -138,7 +138,7 @@ func (c *Connector) DeleteDatabasePermissions(ctx context.Context, permissions *
 			DEALLOCATE perm_cur
 			`
 	return c.
-	setDatabase(&permissions.DatabaseName).
+		setDatabase(&permissions.DatabaseName).
 		ExecContext(ctx, cmd,
 			sql.Named("username", permissions.UserName),
 			sql.Named("permissions", strings.Join(permissions.Permissions, ",")),

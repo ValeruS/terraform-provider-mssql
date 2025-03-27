@@ -1,6 +1,6 @@
 # mssql_database_credential
 
-The `mssql_database_credential` resource create a database credential on a SQL Server.
+The `mssql_database_credential` resource allows you to create and manage database-scoped credentials in SQL Server.
 
 ## Example Usage
 

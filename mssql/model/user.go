@@ -8,6 +8,7 @@ type User struct {
 	Password        string
 	SIDStr          string
 	AuthType        string
+	TypeStr         string
 	DefaultSchema   string
 	DefaultLanguage string
 	Roles           []string

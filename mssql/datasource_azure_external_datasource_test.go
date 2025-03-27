@@ -18,7 +18,7 @@ func TestAccDataAzureExternalDatasource_Azure_Basic(t *testing.T) {
 			{
 				Config: testAccCheckDataAzureExternalDatasource(t, "data_azure_test", "azure", map[string]interface{}{"database": "testdb", "data_source_name": "data_test_datasource", "location": "fakesqlsrv.database.windows.net", "type": "RDBMS", "remote_database_name": "test_db_remote", "credential_name": "data_test_scoped_cred", "identity_name": "test_identity_name", "secret": "V3ryS3cretP@asswd", "password": "V3ryS3cretP@asswd!Key"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_azure_external_datasource.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/data_test_datasource"),
+					resource.TestCheckResourceAttr("data.mssql_azure_external_datasource.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/externaldatasource/data_test_datasource"),
 					resource.TestCheckResourceAttr("data.mssql_azure_external_datasource.data_azure_test", "database", "testdb"),
 					resource.TestCheckResourceAttr("data.mssql_azure_external_datasource.data_azure_test", "data_source_name", "data_test_datasource"),
 					resource.TestCheckResourceAttr("data.mssql_azure_external_datasource.data_azure_test", "server.#", "1"),

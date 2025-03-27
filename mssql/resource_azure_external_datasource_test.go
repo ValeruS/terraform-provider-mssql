@@ -196,7 +196,7 @@ func testAccCheckAzureExternalDatasourceExists(resource string, checks ...Check)
 			case "data_source_name":
 				actual = extdatasource.DataSourceName
 			case "type":
-				actual = extdatasource.TypeDesc
+				actual = extdatasource.TypeStr
 			default:
 				return fmt.Errorf("unknown property %s", check.name)
 			}

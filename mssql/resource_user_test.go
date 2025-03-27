@@ -631,25 +631,6 @@ func testAccCheckUserExists(resource string, checks ...Check) resource.TestCheck
 	}
 }
 
-func equal(a, b interface{}) bool {
-	switch a.(type) {
-	case []string:
-		aa := a.([]string)
-		bb := b.([]string)
-		if len(aa) != len(bb) {
-			return false
-		}
-		for i, v := range aa {
-			if v != bb[i] {
-				return false
-			}
-		}
-		return true
-	default:
-		return a == b
-	}
-}
-
 func testAccCheckDatabaseUserWorks(resource string, username, password string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		rs, ok := state.RootModule().Resources[resource]

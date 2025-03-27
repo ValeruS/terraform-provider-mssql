@@ -36,17 +36,17 @@ func resourceDatabaseSchema() *schema.Resource {
 				Default:  "master",
 			},
 			schemaNameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			ownerNameProp: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Default:  defaultOwnerNameDefault,
+				Default:  defaultDboPropDefault,
 				DiffSuppressFunc: func(k, old, new string, data *schema.ResourceData) bool {
-					return (old == "" && new == defaultOwnerNameDefault) || (old == defaultOwnerNameDefault && new == "")
+					return (old == "" && new == defaultDboPropDefault) || (old == defaultDboPropDefault && new == "")
 				},
 			},
 			schemaIdProp: {
@@ -60,7 +60,7 @@ func resourceDatabaseSchema() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: defaultTimeout,
-			Read: defaultTimeout,
+			Read:   defaultTimeout,
 			Update: defaultTimeout,
 			Delete: defaultTimeout,
 		},
@@ -72,11 +72,36 @@ type DatabaseSchemaConnector interface {
 	GetDatabaseSchema(ctx context.Context, database, schemaName string) (*model.DatabaseSchema, error)
 	UpdateDatabaseSchema(ctx context.Context, database string, schemaName string, ownerName string) error
 	DeleteDatabaseSchema(ctx context.Context, database, schemaName string) error
+	DatabaseExists(ctx context.Context, database string) (bool, error)
+}
+
+func resourceDatabaseSchemaCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	logger := loggerFromMeta(meta, "schema", "create")
+	logger.Debug().Msgf("Create %s", getDatabaseSchemaID(data))
+
+	database := data.Get(databaseProp).(string)
+	schemaName := data.Get(schemaNameProp).(string)
+	ownerName := data.Get(ownerNameProp).(string)
+
+	connector, err := getDatabaseSchemaConnector(meta, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err = connector.CreateDatabaseSchema(ctx, database, schemaName, ownerName); err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to create schema [%s].[%s]", database, schemaName))
+	}
+
+	data.SetId(getDatabaseSchemaID(data))
+
+	logger.Info().Msgf("created schema [%s].[%s]", database, schemaName)
+
+	return resourceDatabaseSchemaRead(ctx, data, meta)
 }
 
 func resourceDatabaseSchemaRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "schema", "read")
-	logger.Debug().Msgf("Read %s", getDatabaseSchemaID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	schemaName := data.Get(schemaNameProp).(string)
@@ -84,6 +109,17 @@ func resourceDatabaseSchemaRead(ctx context.Context, data *schema.ResourceData, 
 	connector, err := getDatabaseSchemaConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Check if database exists
+	exists, err := connector.DatabaseExists(ctx, database)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to check if database [%s] exists", database))
+	}
+	if !exists {
+		logger.Info().Msgf("Database [%s] does not exist", database)
+		data.SetId("")
+		return nil
 	}
 
 	sqlschema, err := connector.GetDatabaseSchema(ctx, database, schemaName)
@@ -114,33 +150,9 @@ func resourceDatabaseSchemaRead(ctx context.Context, data *schema.ResourceData, 
 	return nil
 }
 
-func resourceDatabaseSchemaCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	logger := loggerFromMeta(meta, "schema", "create")
-	logger.Debug().Msgf("Create %s", getDatabaseSchemaID(data))
-
-	database := data.Get(databaseProp).(string)
-	schemaName := data.Get(schemaNameProp).(string)
-	ownerName := data.Get(ownerNameProp).(string)
-
-	connector, err := getDatabaseSchemaConnector(meta, data)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err = connector.CreateDatabaseSchema(ctx, database, schemaName, ownerName); err != nil {
-		return diag.FromErr(errors.Wrapf(err, "unable to create schema [%s].[%s]", database, schemaName))
-	}
-
-	data.SetId(getDatabaseSchemaID(data))
-
-	logger.Info().Msgf("created schema [%s].[%s]", database, schemaName)
-
-	return resourceDatabaseSchemaRead(ctx, data, meta)
-}
-
 func resourceDatabaseSchemaDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "schema", "delete")
-	logger.Debug().Msgf("Delete %s", getDatabaseSchemaID(data))
+	logger.Debug().Msgf("Delete %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	schemaName := data.Get(schemaNameProp).(string)
@@ -163,7 +175,7 @@ func resourceDatabaseSchemaDelete(ctx context.Context, data *schema.ResourceData
 
 func resourceDatabaseSchemaUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "schema", "update")
-	logger.Debug().Msgf("Update %s", getDatabaseSchemaID(data))
+	logger.Debug().Msgf("Update %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	schemaName := data.Get(schemaNameProp).(string)
@@ -198,13 +210,13 @@ func resourceDatabaseSchemaImport(ctx context.Context, data *schema.ResourceData
 	}
 
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 3 {
+	if len(parts) != 4 {
 		return nil, errors.New("invalid ID")
 	}
 	if err = data.Set(databaseProp, parts[1]); err != nil {
 		return nil, err
 	}
-	if err = data.Set(schemaNameProp, parts[2]); err != nil {
+	if err = data.Set(schemaNameProp, parts[3]); err != nil {
 		return nil, err
 	}
 

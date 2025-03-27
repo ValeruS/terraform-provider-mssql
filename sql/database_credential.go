@@ -63,7 +63,7 @@ func (c *Connector) DeleteDatabaseCredential(ctx context.Context, database, cred
 						'DROP DATABASE SCOPED CREDENTIAL ' + QuoteName(@credentialname)
 			EXEC (@stmt)`
 	return c.
-	setDatabase(&database).
+		setDatabase(&database).
 		ExecContext(ctx, cmd,
 			sql.Named("credentialname", credentialname),
 		)

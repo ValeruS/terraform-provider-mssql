@@ -1,6 +1,6 @@
 # mssql_database_role
 
-The `mssql_database_schema` resource creates and manages a schema on a SQL Server database.
+The `mssql_database_schema` resource allows you to create and manage database schemas in SQL Server.
 
 ## Example Usage
 

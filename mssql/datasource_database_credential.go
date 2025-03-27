@@ -28,9 +28,9 @@ func datasourceDatabaseCredential() *schema.Resource {
 				ForceNew: true,
 			},
 			credentialNameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			identitynameProp: {

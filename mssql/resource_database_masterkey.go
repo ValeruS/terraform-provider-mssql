@@ -10,13 +10,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const keynameProp = "key_name"
-const keyguidProp   = "key_guid"
-const symmetrickeyidProp = "symmetric_key_id"
-const keylengthProp = "key_length"
-const keyalgorithmProp = "key_algorithm"
-const algorithmdescProp = "algorithm_desc"
-
 func resourceDatabaseMasterkey() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceDatabaseMasterkeyCreate,
@@ -39,9 +32,9 @@ func resourceDatabaseMasterkey() *schema.Resource {
 				ForceNew: true,
 			},
 			passwordProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				Sensitive: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
 			},
 			keynameProp: {
@@ -75,7 +68,7 @@ func resourceDatabaseMasterkey() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: defaultTimeout,
-			Read: defaultTimeout,
+			Read:   defaultTimeout,
 			Update: defaultTimeout,
 			Delete: defaultTimeout,
 		},
@@ -87,6 +80,7 @@ type DatabaseMasterkeyConnector interface {
 	GetDatabaseMasterkey(ctx context.Context, database string) (*model.DatabaseMasterkey, error)
 	UpdateDatabaseMasterkey(ctx context.Context, database, password string) error
 	DeleteDatabaseMasterkey(ctx context.Context, database string) error
+	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
 
 func resourceDatabaseMasterkeyCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -121,6 +115,17 @@ func resourceDatabaseMasterkeyRead(ctx context.Context, data *schema.ResourceDat
 	connector, err := getDatabaseMasterkeyConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Check if database exists
+	exists, err := connector.DatabaseExists(ctx, database)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to check if database [%s] exists", database))
+	}
+	if !exists {
+		logger.Info().Msgf("Database [%s] does not exist", database)
+		data.SetId("")
+		return nil
 	}
 
 	masterkey, err := connector.GetDatabaseMasterkey(ctx, database)
@@ -160,7 +165,7 @@ func resourceDatabaseMasterkeyRead(ctx context.Context, data *schema.ResourceDat
 
 func resourceDatabaseMasterkeyUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "databasemasterkey", "update")
-	logger.Debug().Msgf("Update %s", getDatabaseMasterkeyID(data))
+	logger.Debug().Msgf("Update %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	password := data.Get(passwordProp).(string)

@@ -73,7 +73,7 @@ func TestAccDatabaseRole_Azure_Basic_Create(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckRoleDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckRole(t, "azure_test_create", "azure", map[string]interface{}{"database":"testdb", "role_name": "test_role_create"}),
+				Config: testAccCheckRole(t, "azure_test_create", "azure", map[string]interface{}{"database": "testdb", "role_name": "test_role_create"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRoleExists("mssql_database_role.azure_test_create"),
 					resource.TestCheckResourceAttr("mssql_database_role.azure_test_create", "database", "testdb"),
@@ -211,7 +211,7 @@ func TestAccDatabaseRole_Azure_Basic_Update(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckRoleDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckRole(t, "azure_test_update", "azure", map[string]interface{}{"database":"testdb", "role_name": "test_role_pre"}),
+				Config: testAccCheckRole(t, "azure_test_update", "azure", map[string]interface{}{"database": "testdb", "role_name": "test_role_pre"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRoleExists("mssql_database_role.azure_test_update"),
 					resource.TestCheckResourceAttr("mssql_database_role.azure_test_update", "database", "testdb"),
@@ -229,7 +229,7 @@ func TestAccDatabaseRole_Azure_Basic_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCheckRole(t, "azure_test_update", "azure", map[string]interface{}{"database":"testdb", "role_name": "test_role_post"}),
+				Config: testAccCheckRole(t, "azure_test_update", "azure", map[string]interface{}{"database": "testdb", "role_name": "test_role_post"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRoleExists("mssql_database_role.azure_test_update"),
 					resource.TestCheckResourceAttr("mssql_database_role.azure_test_update", "database", "testdb"),

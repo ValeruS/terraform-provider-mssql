@@ -51,11 +51,12 @@ func (c *Connector) CreateLogin(ctx context.Context, name, password, sid, defaul
 	return c.
 		setDatabase(&database).
 		ExecContext(ctx, cmd,
-		sql.Named("name", name),
-		sql.Named("password", password),
-		sql.Named("sid", sid),
-		sql.Named("defaultDatabase", defaultDatabase),
-		sql.Named("defaultLanguage", defaultLanguage))
+			sql.Named("name", name),
+			sql.Named("password", password),
+			sql.Named("sid", sid),
+			sql.Named("defaultDatabase", defaultDatabase),
+			sql.Named("defaultLanguage", defaultLanguage),
+		)
 }
 
 func (c *Connector) UpdateLogin(ctx context.Context, name, password, defaultDatabase, defaultLanguage string) error {
@@ -77,11 +78,13 @@ func (c *Connector) UpdateLogin(ctx context.Context, name, password, defaultData
 						END
 					END
 			EXEC (@sql)`
-	return c.ExecContext(ctx, cmd,
-		sql.Named("name", name),
-		sql.Named("password", password),
-		sql.Named("defaultDatabase", defaultDatabase),
-		sql.Named("defaultLanguage", defaultLanguage))
+	return c.
+		ExecContext(ctx, cmd,
+			sql.Named("name", name),
+			sql.Named("password", password),
+			sql.Named("defaultDatabase", defaultDatabase),
+			sql.Named("defaultLanguage", defaultLanguage),
+		)
 }
 
 func (c *Connector) DeleteLogin(ctx context.Context, name string) error {
@@ -92,7 +95,10 @@ func (c *Connector) DeleteLogin(ctx context.Context, name string) error {
 					SET @sql = 'IF EXISTS (SELECT 1 FROM [master].[sys].[sql_logins] WHERE [name] = ' + QuoteName(@name, '''') + ') ' +
 										 'DROP LOGIN ' + QuoteName(@name)
 					EXEC (@sql)`
-	return c.ExecContext(ctx, cmd, sql.Named("name", name))
+	return c.
+		ExecContext(ctx, cmd, 
+			sql.Named("name", name),
+		)
 }
 
 func (c *Connector) killSessionsForLogin(ctx context.Context, name string) error {

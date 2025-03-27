@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.8]
+
+### Added
+
+- New resource `mssql_database_sqlscript` for executing and managing SQL scripts within databases
+
+### Changed
+
+- Added optional parameter `type` ('E'|'X') when creating database users from Entra ID (formerly Azure AD) when object_id is specified
+- Improved resource handling to trigger recreation
+- Migrated authentication from ADAL (Azure Active Directory Authentication Library) to MSAL (Microsoft Authentication Library)
+
 ## [0.3.7]
 
 ### Fixed

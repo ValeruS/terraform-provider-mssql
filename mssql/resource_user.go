@@ -8,6 +8,7 @@ import (
 	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/pkg/errors"
 )
 
@@ -36,9 +37,9 @@ func resourceUser() *schema.Resource {
 				Default:  "master",
 			},
 			usernameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			objectIdProp: {
@@ -46,18 +47,27 @@ func resourceUser() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
+			typeStrProp: {
+				Type:          schema.TypeString,
+				Computed:      true,
+				Optional:      true,
+				ForceNew:      true,
+				ValidateFunc:  validation.StringInSlice([]string{"E", "X"}, false),
+				ConflictsWith: []string{loginNameProp, passwordProp},
+				RequiredWith:  []string{objectIdProp},
+			},
 			loginNameProp: {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				ConflictsWith: []string{passwordProp},
-				ValidateFunc: validate.SQLIdentifier,
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{passwordProp, objectIdProp},
+				ValidateFunc:  validate.SQLIdentifier,
 			},
 			passwordProp: {
-				Type:      schema.TypeString,
-				Optional:  true,
-				ForceNew:  true,
-				Sensitive: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
 			},
 			sidStrProp: {
@@ -73,9 +83,9 @@ func resourceUser() *schema.Resource {
 				Computed: true,
 			},
 			defaultSchemaProp: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  defaultSchemaPropDefault,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      defaultDboPropDefault,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			defaultLanguageProp: {
@@ -107,6 +117,7 @@ type UserConnector interface {
 	GetUser(ctx context.Context, database, username string) (*model.User, error)
 	UpdateUser(ctx context.Context, database string, user *model.User) error
 	DeleteUser(ctx context.Context, database, username string) error
+	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
 
 func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -118,6 +129,7 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 	objectId := data.Get(objectIdProp).(string)
 	loginName := data.Get(loginNameProp).(string)
 	password := data.Get(passwordProp).(string)
+	typeStr := data.Get(typeStrProp).(string)
 	defaultSchema := data.Get(defaultSchemaProp).(string)
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
 	roles := data.Get(rolesProp).(*schema.Set).List()
@@ -142,6 +154,7 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 		LoginName:       loginName,
 		Password:        password,
 		AuthType:        authType,
+		TypeStr:         typeStr,
 		DefaultSchema:   defaultSchema,
 		DefaultLanguage: defaultLanguage,
 		Roles:           toStringSlice(roles),
@@ -169,6 +182,17 @@ func resourceUserRead(ctx context.Context, data *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
+	// Check if database exists
+	exists, err := connector.DatabaseExists(ctx, database)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to check if database [%s] exists", database))
+	}
+	if !exists {
+		logger.Info().Msgf("Database [%s] does not exist", database)
+		data.SetId("")
+		return nil
+	}
+
 	user, err := connector.GetUser(ctx, database, username)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "unable to read user [%s].[%s]", database, username))
@@ -181,6 +205,9 @@ func resourceUserRead(ctx context.Context, data *schema.ResourceData, meta inter
 			return diag.FromErr(err)
 		}
 		if err = data.Set(sidStrProp, user.SIDStr); err != nil {
+			return diag.FromErr(err)
+		}
+		if err = data.Set(typeStrProp, user.TypeStr); err != nil {
 			return diag.FromErr(err)
 		}
 		if err = data.Set(authenticationTypeProp, user.AuthType); err != nil {
@@ -272,13 +299,13 @@ func resourceUserImport(ctx context.Context, data *schema.ResourceData, meta int
 	}
 
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 3 {
+	if len(parts) != 4 {
 		return nil, errors.New("invalid ID")
 	}
 	if err = data.Set(databaseProp, parts[1]); err != nil {
 		return nil, err
 	}
-	if err = data.Set(usernameProp, parts[2]); err != nil {
+	if err = data.Set(usernameProp, parts[3]); err != nil {
 		return nil, err
 	}
 
@@ -302,6 +329,9 @@ func resourceUserImport(ctx context.Context, data *schema.ResourceData, meta int
 	}
 
 	if err = data.Set(authenticationTypeProp, login.AuthType); err != nil {
+		return nil, err
+	}
+	if err = data.Set(typeStrProp, login.TypeStr); err != nil {
 		return nil, err
 	}
 	if err = data.Set(principalIdProp, login.PrincipalID); err != nil {
