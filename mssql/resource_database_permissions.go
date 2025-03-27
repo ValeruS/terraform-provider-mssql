@@ -157,6 +157,15 @@ func resourceDatabasePermissionDelete(ctx context.Context, data *schema.Resource
 	username := data.Get(usernameProp).(string)
 	permissions := data.Get(permissionsProp).(*schema.Set).List()
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	if data.HasChange(permissionsProp) {
+		oldValue, _ := data.GetChange(permissionsProp)
+		if oldSet, ok := oldValue.(*schema.Set); ok {
+			oldValues[permissionsProp] = oldSet.List()
+		}
+	}
+
 	connector, err := getDatabasePermissionsConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
@@ -168,6 +177,12 @@ func resourceDatabasePermissionDelete(ctx context.Context, data *schema.Resource
 		Permissions: toStringSlice(permissions),
 	}
 	if err = connector.DeleteDatabasePermissions(ctx, dbPermissionModel); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to delete permissions for user [%s] on database [%s]", username, database))
 	}
 

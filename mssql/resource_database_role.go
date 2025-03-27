@@ -181,12 +181,27 @@ func resourceDatabaseRoleUpdate(ctx context.Context, data *schema.ResourceData, 
 	roleName := data.Get(roleNameProp).(string)
 	ownerName := data.Get(ownerNameProp).(string)
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{roleNameProp, ownerNameProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
+	}
+
 	connector, err := getDatabaseRoleConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if err = connector.UpdateDatabaseRole(ctx, database, roleId, roleName, ownerName); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update role [%s].[%s]", database, roleName))
 	}
 

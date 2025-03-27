@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated authentication from ADAL (Azure Active Directory Authentication Library) to MSAL (Microsoft Authentication Library)
 
 ### Fixed
-- Fixed issue where password updates were not properly triggering resource recreation when SQL-side password update failed
+- Fixed issue where resource property updates were not properly triggering resource recreation when the SQL Server-side update operation failed
 
 ## [0.3.7]
 
@@ -162,6 +162,9 @@ Initial release.
 
 - Resource `mssql_login` to manipulate logins to a SQL Server.
 - Resource `mssql_user` to manipulate users in a SQL Server database.
+
+### Fixed
+- Fixed issue where resource property updates (including password, secrets, default_language, default_database) were not properly triggering resource recreation when the SQL Server-side update operation failed
 
 [Unreleased]: https://github.com/betr-io/terraform-provider-mssql/compare/v0.2.7...HEAD
 [0.2.7]: https://github.com/betr-io/terraform-provider-mssql/compare/v0.2.6...v0.2.7

@@ -353,19 +353,26 @@ func resourceDatabaseSQLScriptUpdate(ctx context.Context, data *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{sqlscriptProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
+	}
+
 	connector, err := getDatabaseSQLScriptConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	// Store the old script value in case we need to revert
-	oldValue, _ := data.GetChange(sqlscriptProp)
-	oldScript := oldValue.(string)
-
 	if err := connector.DataBaseExecuteScript(ctx, database, script); err != nil {
-		// If script execution fails, revert the state to the old script value
-		if err := data.Set(sqlscriptProp, oldScript); err != nil {
-			logger.Error().Err(err).Msg("Failed to revert sqlscript state after execution error")
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
 		}
 		return diag.FromErr(errors.Wrapf(err, "unable to execute SQL script in database [%s]", database))
 	}

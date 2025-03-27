@@ -160,12 +160,27 @@ func resourceDatabaseCredentialUpdate(ctx context.Context, data *schema.Resource
 	identityname := data.Get(identitynameProp).(string)
 	secret := data.Get(secretProp).(string)
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{identitynameProp, secretProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
+	}
+
 	connector, err := getDatabaseCredentialConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if err = connector.UpdateDatabaseCredential(ctx, database, credentialname, identityname, secret); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update database scoped credential [%s] on database [%s]", credentialname, database))
 	}
 

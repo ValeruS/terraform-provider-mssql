@@ -154,11 +154,13 @@ func resourceLoginUpdate(ctx context.Context, data *schema.ResourceData, meta in
 	defaultDatabase := data.Get(defaultDatabaseProp).(string)
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
 
-	// Store the old password value in case we need to revert
-	var oldPassword string
-	if data.HasChange(passwordProp) {
-		oldValue, _ := data.GetChange(passwordProp)
-		oldPassword = oldValue.(string)
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{passwordProp, defaultDatabaseProp, defaultLanguageProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
 	}
 
 	connector, err := getLoginConnector(meta, data)
@@ -167,10 +169,10 @@ func resourceLoginUpdate(ctx context.Context, data *schema.ResourceData, meta in
 	}
 
 	if err = connector.UpdateLogin(ctx, loginName, password, defaultDatabase, defaultLanguage); err != nil {
-		// If update fails and we were changing the password, revert the state
-		if data.HasChange(passwordProp) {
-			if err := data.Set(passwordProp, oldPassword); err != nil {
-				logger.Error().Err(err).Msg("Failed to revert password state after update error")
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
 			}
 		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update login [%s]", loginName))

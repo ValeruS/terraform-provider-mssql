@@ -212,12 +212,27 @@ func resourceAzureExternalDatasourceUpdate(ctx context.Context, data *schema.Res
 	credentialname := data.Get(credentialNameProp).(string)
 	rdatabasename := data.Get(rdatabasenameProp).(string)
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{locationProp, credentialNameProp, rdatabasenameProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
+	}
+
 	connector, err := getAzureExternalDatasourceConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if err = connector.UpdateAzureExternalDatasource(ctx, database, datasourcename, location, credentialname, rdatabasename); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update external data source [%s] on database [%s]", datasourcename, database))
 	}
 
