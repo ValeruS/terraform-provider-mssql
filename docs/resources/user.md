@@ -129,5 +129,5 @@ Before importing `mssql_user`, you must to configure the authentication to your 
 After that you can import the SQL Server database user using the server URL and `login name`, e.g.
 
 ```shell
-terraform import mssql_user.example 'mssql://example-sql-server.database.windows.net/master/user@example.com'
+terraform import mssql_user.example 'mssql://example-sql-server.database.windows.net/example-db/user/username'
 ```

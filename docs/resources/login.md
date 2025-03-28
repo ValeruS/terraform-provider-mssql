@@ -68,5 +68,5 @@ Before importing `mssql_login`, you must to configure the authentication to your
 After that you can import the SQL Server login using the server URL and `login name`, e.g.
 
 ```shell
-terraform import mssql_login.example 'mssql://example-sql-server.database.windows.net/testlogin'
+terraform import mssql_login.example 'mssql://example-sql-server.database.windows.net/login/login_name'
 ```

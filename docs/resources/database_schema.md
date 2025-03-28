@@ -92,5 +92,5 @@ Before importing `mssql_database_schema`, you must to configure the authenticati
 After that you can import the SQL Server database role using the server URL and `role name`, e.g.
 
 ```shell
-terraform import mssql_database_schema.example 'mssql://example-sql-server.database.windows.net/master/testschema'
+terraform import mssql_database_schema.example 'mssql://example-sql-server.database.windows.net/example-db/chema/schema_name'
 ```

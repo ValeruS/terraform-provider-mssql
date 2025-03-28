@@ -104,5 +104,5 @@ Before importing `mssql_azure_external_datasource`, you must to configure the au
 After that you can import the SQL Server database scoped credential using the server URL and `data source name`, e.g.
 
 ```shell
-terraform import mssql_azure_external_datasource.example 'mssql://example-sql-server.database.windows.net/example-db/data_source_name'
+terraform import mssql_azure_external_datasource.example 'mssql://example-sql-server.database.windows.net/example-db/externaldatasource/data_source_name'
 ```

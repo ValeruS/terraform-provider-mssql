@@ -92,5 +92,5 @@ Before importing `mssql_database_role`, you must to configure the authentication
 After that you can import the SQL Server database role using the server URL and `role name`, e.g.
 
 ```shell
-terraform import mssql_database_role.example 'mssql://example-sql-server.database.windows.net/master/testrole'
+terraform import mssql_database_role.example 'mssql://example-sql-server.database.windows.net/example-db/role/role_name'
 ```
