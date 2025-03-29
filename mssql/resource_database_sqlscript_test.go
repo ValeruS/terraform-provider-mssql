@@ -69,15 +69,15 @@ func TestAccDatabaseSQLScript_Azure_Basic(t *testing.T) {
 
 func testAccCheckDatabaseSQLScript(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `
-					resource "mssql_database_sqlscript" "{{ .name }}" {
-						server {
-							host = "{{ .host }}"
-							{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						}
-						database      = "{{ .database }}"
-						sqlscript     = "{{ .sqlscript }}"
-						verify_object = "{{ .verify_object }}"
-					}`
+			resource "mssql_database_sqlscript" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database      = "{{ .database }}"
+				sqlscript     = "{{ .sqlscript }}"
+				verify_object = "{{ .verify_object }}"
+			}`
 
 	data["name"] = name
 	data["login"] = login

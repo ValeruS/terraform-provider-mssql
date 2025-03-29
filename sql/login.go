@@ -28,7 +28,7 @@ func (c *Connector) GetLogin(ctx context.Context, name string) (*model.Login, er
 func (c *Connector) CreateLogin(ctx context.Context, name, password, sid, defaultDatabase, defaultLanguage string) error {
 	cmd := `DECLARE @sql nvarchar(max)
 			SET @sql = 'CREATE LOGIN ' + QuoteName(@name) + ' ' +
-								 'WITH PASSWORD = ' + QuoteName(@password, '''')
+						'WITH PASSWORD = ' + QuoteName(@password, '''')
 			IF NOT @sid = ''
 				BEGIN
 					SET @sql = @sql + ', SID = ' + CONVERT(VARCHAR(85), @sid, 1)
@@ -62,7 +62,7 @@ func (c *Connector) CreateLogin(ctx context.Context, name, password, sid, defaul
 func (c *Connector) UpdateLogin(ctx context.Context, name, password, defaultDatabase, defaultLanguage string) error {
 	cmd := `DECLARE @sql nvarchar(max)
 			SET @sql = 'ALTER LOGIN ' + QuoteName(@name) + ' ' +
-								 'WITH PASSWORD = ' + QuoteName(@password, '''')
+						'WITH PASSWORD = ' + QuoteName(@password, '''')
 			IF @@VERSION NOT LIKE 'Microsoft SQL Azure%'
 				BEGIN
 					IF @defaultDatabase = '' SET @defaultDatabase = 'master'
@@ -92,9 +92,9 @@ func (c *Connector) DeleteLogin(ctx context.Context, name string) error {
 		return err
 	}
 	cmd := `DECLARE @sql nvarchar(max)
-					SET @sql = 'IF EXISTS (SELECT 1 FROM [master].[sys].[sql_logins] WHERE [name] = ' + QuoteName(@name, '''') + ') ' +
-										 'DROP LOGIN ' + QuoteName(@name)
-					EXEC (@sql)`
+			SET @sql = 'IF EXISTS (SELECT 1 FROM [master].[sys].[sql_logins] WHERE [name] = ' + QuoteName(@name, '''') + ') ' +
+						'DROP LOGIN ' + QuoteName(@name)
+			EXEC (@sql)`
 	return c.
 		ExecContext(ctx, cmd, 
 			sql.Named("name", name),
@@ -103,22 +103,22 @@ func (c *Connector) DeleteLogin(ctx context.Context, name string) error {
 
 func (c *Connector) killSessionsForLogin(ctx context.Context, name string) error {
 	cmd := `-- adapted from https://stackoverflow.com/a/5178097/38055
-					DECLARE sessionsToKill CURSOR FAST_FORWARD FOR
-						SELECT session_id
-						FROM sys.dm_exec_sessions
-						WHERE login_name = @name
-					OPEN sessionsToKill
-					DECLARE @sessionId INT
-					DECLARE @statement NVARCHAR(200)
-					FETCH NEXT FROM sessionsToKill INTO @sessionId
-					WHILE @@FETCH_STATUS = 0
-					BEGIN
-						PRINT 'Killing session ' + CAST(@sessionId AS NVARCHAR(20)) + ' for login ' + @name
-						SET @statement = 'KILL ' + CAST(@sessionId AS NVARCHAR(20))
-						EXEC sp_executesql @statement
-						FETCH NEXT FROM sessionsToKill INTO @sessionId
-					END
-					CLOSE sessionsToKill
-					DEALLOCATE sessionsToKill`
+			DECLARE sessionsToKill CURSOR FAST_FORWARD FOR
+				SELECT session_id
+				FROM sys.dm_exec_sessions
+				WHERE login_name = @name
+			OPEN sessionsToKill
+			DECLARE @sessionId INT
+			DECLARE @statement NVARCHAR(200)
+			FETCH NEXT FROM sessionsToKill INTO @sessionId
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+				PRINT 'Killing session ' + CAST(@sessionId AS NVARCHAR(20)) + ' for login ' + @name
+				SET @statement = 'KILL ' + CAST(@sessionId AS NVARCHAR(20))
+				EXEC sp_executesql @statement
+				FETCH NEXT FROM sessionsToKill INTO @sessionId
+			END
+			CLOSE sessionsToKill
+			DEALLOCATE sessionsToKill`
 	return c.ExecContext(ctx, cmd, sql.Named("name", name))
 }
