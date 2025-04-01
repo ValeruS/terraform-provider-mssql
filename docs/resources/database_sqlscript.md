@@ -91,6 +91,21 @@ In addition to the arguments listed above, the following computed attributes are
 
 * `id` - The ID of the SQL script resource.
 
+## Import
+
+Before importing `mssql_database_sqlscript`, you must to configure the authentication to your sql server:
+
+1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
+2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
+
+After that you can import the SQL script using the server URL and `base64(databasename:verify_object)`, e.g.
+
+```shell
+terraform import mssql_database_sqlscript.example 'mssql://example-sql-server.database.windows.net/MyDatabase/sqlscript/TXlEYXRhYmFzZTpUQUJMRSBVc2Vycw=='
+```
+
+Note: The base64 string in the example above represents "MyDatabase:TABLE Users"
+
 ## Notes
 
 1. The script is executed exactly as provided, so ensure proper error handling and idempotency in your SQL scripts.

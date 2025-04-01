@@ -96,7 +96,7 @@ func (c *Connector) DeleteLogin(ctx context.Context, name string) error {
 						'DROP LOGIN ' + QuoteName(@name)
 			EXEC (@sql)`
 	return c.
-		ExecContext(ctx, cmd, 
+		ExecContext(ctx, cmd,
 			sql.Named("name", name),
 		)
 }
