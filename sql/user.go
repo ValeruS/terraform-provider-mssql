@@ -75,6 +75,19 @@ func (c *Connector) GetUser(ctx context.Context, database, username string) (*mo
 			return nil, err
 		}
 	}
+	if user.AuthType == "EXTERNAL" && user.LoginName == "" {
+		cmd = "SELECT name FROM [sys].[server_principals] WHERE type NOT IN ('G', 'R') AND CONVERT(varchar(64), sid, 1) = LEFT(CONVERT(varchar(64), @sid, 1), 34)"
+		c.Database = "master"
+		err = c.QueryRowContext(ctx, cmd,
+			func(r *sql.Row) error {
+				return r.Scan(&user.LoginName)
+			},
+			sql.Named("sid", sid),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if roles == "" {
 		user.Roles = make([]string, 0)
 	} else {
