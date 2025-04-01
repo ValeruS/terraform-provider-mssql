@@ -24,7 +24,7 @@ func dataSourceUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "master",
+				Default:  defaultDatabaseDefault,
 			},
 			usernameProp: {
 				Type:     schema.TypeString,
@@ -75,7 +75,7 @@ func dataSourceUser() *schema.Resource {
 
 func dataSourceUserRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "user", "read")
-	logger.Debug().Msgf("Read %s", getUserID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	username := data.Get(usernameProp).(string)

@@ -1,6 +1,6 @@
 # mssql_database_permissions
 
-The `mssql_database_permissions` resource manages user permissions on a SQL Server.
+The `mssql_database_permissions` resource allows you to create and manage fine-grained database-level permissions for users in SQL Server.
 
 ## Example Usage
 
@@ -65,5 +65,5 @@ Before importing `mssql_database_permissions`, you must to configure the authent
 After that you can import the SQL Server database permission using the server URL and `user name`, e.g.
 
 ```shell
-terraform import mssql_database_permissions.example 'mssql://example-sql-server.database.windows.net/master/username/permissions'
+terraform import mssql_database_permissions.example 'mssql://example-sql-server.database.windows.net/example-db/permission/username'
 ```

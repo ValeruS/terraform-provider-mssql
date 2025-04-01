@@ -50,7 +50,7 @@ func dataSourceLogin() *schema.Resource {
 
 func dataSourceLoginRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "login", "read")
-	logger.Debug().Msgf("Read %s", getLoginID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	loginName := data.Get(loginNameProp).(string)
 

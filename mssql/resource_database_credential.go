@@ -11,11 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const credentialNameProp = "credential_name"
-const identitynameProp   = "identity_name"
-const secretProp         = "secret"
-const credentialIdProp   = "credential_id"
-
 func resourceDatabaseCredential() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceDatabaseCredentialCreate,
@@ -41,20 +36,20 @@ func resourceDatabaseCredential() *schema.Resource {
 				ForceNew: true,
 			},
 			credentialNameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			identitynameProp: {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Required:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			secretProp: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Sensitive: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
 			},
 			principalIdProp: {
@@ -68,7 +63,7 @@ func resourceDatabaseCredential() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: defaultTimeout,
-			Read: defaultTimeout,
+			Read:   defaultTimeout,
 			Update: defaultTimeout,
 			Delete: defaultTimeout,
 		},
@@ -80,6 +75,7 @@ type DatabaseCredentialConnector interface {
 	GetDatabaseCredential(ctx context.Context, database, credentialname string) (*model.DatabaseCredential, error)
 	UpdateDatabaseCredential(ctx context.Context, database, credentialname, identityname, secret string) error
 	DeleteDatabaseCredential(ctx context.Context, database, credentialname string) error
+	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
 
 func resourceDatabaseCredentialCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -119,6 +115,17 @@ func resourceDatabaseCredentialRead(ctx context.Context, data *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
+	// Check if database exists
+	exists, err := connector.DatabaseExists(ctx, database)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to check if database [%s] exists", database))
+	}
+	if !exists {
+		logger.Info().Msgf("Database [%s] does not exist", database)
+		data.SetId("")
+		return nil
+	}
+
 	scopedcredential, err := connector.GetDatabaseCredential(ctx, database, credentialname)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "unable to read database scoped credential [%s] on database [%s]", credentialname, database))
@@ -146,12 +153,21 @@ func resourceDatabaseCredentialRead(ctx context.Context, data *schema.ResourceDa
 
 func resourceDatabaseCredentialUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "databasecredential", "update")
-	logger.Debug().Msgf("Update %s", getDatabaseCredentialID(data))
+	logger.Debug().Msgf("Update %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	credentialname := data.Get(credentialNameProp).(string)
 	identityname := data.Get(identitynameProp).(string)
 	secret := data.Get(secretProp).(string)
+
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{identitynameProp, secretProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
+	}
 
 	connector, err := getDatabaseCredentialConnector(meta, data)
 	if err != nil {
@@ -159,6 +175,12 @@ func resourceDatabaseCredentialUpdate(ctx context.Context, data *schema.Resource
 	}
 
 	if err = connector.UpdateDatabaseCredential(ctx, database, credentialname, identityname, secret); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update database scoped credential [%s] on database [%s]", credentialname, database))
 	}
 
@@ -205,13 +227,13 @@ func resourceDatabaseCredentialImport(ctx context.Context, data *schema.Resource
 	}
 
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 3 {
+	if len(parts) != 4 {
 		return nil, errors.New("invalid ID")
 	}
 	if err = data.Set(databaseProp, parts[1]); err != nil {
 		return nil, err
 	}
-	if err = data.Set(credentialNameProp, parts[2]); err != nil {
+	if err = data.Set(credentialNameProp, parts[3]); err != nil {
 		return nil, err
 	}
 
@@ -227,11 +249,11 @@ func resourceDatabaseCredentialImport(ctx context.Context, data *schema.Resource
 
 	scopedcredential, err := connector.GetDatabaseCredential(ctx, database, credentialname)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get database scoped credential [%s] on database [%s]",credentialname, database)
+		return nil, errors.Wrapf(err, "unable to get database scoped credential [%s] on database [%s]", credentialname, database)
 	}
 
 	if scopedcredential == nil {
-		return nil, errors.Errorf("database scoped credential [%s] on database [%s] does not exist",credentialname, database)
+		return nil, errors.Errorf("database scoped credential [%s] on database [%s] does not exist", credentialname, database)
 	}
 
 	if err = data.Set(credentialNameProp, scopedcredential.CredentialName); err != nil {

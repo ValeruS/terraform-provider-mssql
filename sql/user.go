@@ -13,33 +13,33 @@ func (c *Connector) GetUser(ctx context.Context, database, username string) (*mo
 			IF @@VERSION LIKE 'Microsoft SQL Azure%'
 				BEGIN
 					SET @stmt = 'WITH CTE_Roles (principal_id, role_principal_id) AS ' +
-											'(' +
-											'  SELECT member_principal_id, role_principal_id FROM [sys].[database_role_members] WHERE member_principal_id = DATABASE_PRINCIPAL_ID(' + QuoteName(@username, '''') + ')' +
-											'  UNION ALL ' +
-											'  SELECT member_principal_id, drm.role_principal_id FROM [sys].[database_role_members] drm' +
-											'    INNER JOIN CTE_Roles cr ON drm.member_principal_id = cr.role_principal_id' +
-											') ' +
-											'SELECT p.principal_id, p.name, p.authentication_type_desc, COALESCE(p.default_schema_name, ''''), COALESCE(p.default_language_name, ''''), p.sid, CONVERT(VARCHAR(85), p.sid, 1) AS sidStr, '''', COALESCE(STRING_AGG(USER_NAME(r.role_principal_id), '',''), '''') ' +
-											'FROM [sys].[database_principals] p' +
-											'  LEFT JOIN CTE_Roles r ON p.principal_id = r.principal_id ' +
-											'WHERE p.name = ' + QuoteName(@username, '''') + ' ' +
-											'GROUP BY p.principal_id, p.name, p.authentication_type_desc, p.default_schema_name, p.default_language_name, p.sid'
+								'(' +
+								'  SELECT member_principal_id, role_principal_id FROM [sys].[database_role_members] WHERE member_principal_id = DATABASE_PRINCIPAL_ID(' + QuoteName(@username, '''') + ')' +
+								'  UNION ALL ' +
+								'  SELECT member_principal_id, drm.role_principal_id FROM [sys].[database_role_members] drm' +
+								'    INNER JOIN CTE_Roles cr ON drm.member_principal_id = cr.role_principal_id' +
+								') ' +
+								'SELECT p.principal_id, p.name, p.type, p.authentication_type_desc, COALESCE(p.default_schema_name, ''''), COALESCE(p.default_language_name, ''''), p.sid, CONVERT(VARCHAR(85), p.sid, 1) AS sidStr, '''', COALESCE(STRING_AGG(USER_NAME(r.role_principal_id), '',''), '''') ' +
+								'FROM [sys].[database_principals] p' +
+								'  LEFT JOIN CTE_Roles r ON p.principal_id = r.principal_id ' +
+								'WHERE p.name = ' + QuoteName(@username, '''') + ' ' +
+								'GROUP BY p.principal_id, p.name, p.type, p.authentication_type_desc, p.default_schema_name, p.default_language_name, p.sid'
 				END
 			ELSE
 				BEGIN
 					SET @stmt = 'WITH CTE_Roles (principal_id, role_principal_id) AS ' +
-											'(' +
-											'  SELECT member_principal_id, role_principal_id FROM ' + QuoteName(@database) + '.[sys].[database_role_members] WHERE member_principal_id = DATABASE_PRINCIPAL_ID(' + QuoteName(@username, '''') + ')' +
-											'  UNION ALL ' +
-											'  SELECT member_principal_id, drm.role_principal_id FROM ' + QuoteName(@database) + '.[sys].[database_role_members] drm' +
-											'    INNER JOIN CTE_Roles cr ON drm.member_principal_id = cr.role_principal_id' +
-											') ' +
-											'SELECT p.principal_id, p.name, p.authentication_type_desc, COALESCE(p.default_schema_name, ''''), COALESCE(p.default_language_name, ''''), p.sid, CONVERT(VARCHAR(85), p.sid, 1) AS sidStr, COALESCE(sl.name, ''''), COALESCE(STRING_AGG(USER_NAME(r.role_principal_id), '',''), '''') ' +
-											'FROM ' + QuoteName(@database) + '.[sys].[database_principals] p' +
-											'  LEFT JOIN CTE_Roles r ON p.principal_id = r.principal_id ' +
-											'  LEFT JOIN [master].[sys].[sql_logins] sl ON p.sid = sl.sid ' +
-											'WHERE p.name = ' + QuoteName(@username, '''') + ' ' +
-											'GROUP BY p.principal_id, p.name, p.authentication_type_desc, p.default_schema_name, p.default_language_name, p.sid, sl.name'
+								'(' +
+								'  SELECT member_principal_id, role_principal_id FROM ' + QuoteName(@database) + '.[sys].[database_role_members] WHERE member_principal_id = DATABASE_PRINCIPAL_ID(' + QuoteName(@username, '''') + ')' +
+								'  UNION ALL ' +
+								'  SELECT member_principal_id, drm.role_principal_id FROM ' + QuoteName(@database) + '.[sys].[database_role_members] drm' +
+								'    INNER JOIN CTE_Roles cr ON drm.member_principal_id = cr.role_principal_id' +
+								') ' +
+								'SELECT p.principal_id, p.name, p.type, p.authentication_type_desc, COALESCE(p.default_schema_name, ''''), COALESCE(p.default_language_name, ''''), p.sid, CONVERT(VARCHAR(85), p.sid, 1) AS sidStr, COALESCE(sl.name, ''''), COALESCE(STRING_AGG(USER_NAME(r.role_principal_id), '',''), '''') ' +
+								'FROM ' + QuoteName(@database) + '.[sys].[database_principals] p' +
+								'  LEFT JOIN CTE_Roles r ON p.principal_id = r.principal_id ' +
+								'  LEFT JOIN [master].[sys].[sql_logins] sl ON p.sid = sl.sid ' +
+								'WHERE p.name = ' + QuoteName(@username, '''') + ' ' +
+								'GROUP BY p.principal_id, p.name, p.type, p.authentication_type_desc, p.default_schema_name, p.default_language_name, p.sid, sl.name'
 				END
 			EXEC (@stmt)`
 	var (
@@ -51,7 +51,7 @@ func (c *Connector) GetUser(ctx context.Context, database, username string) (*mo
 		setDatabase(&database).
 		QueryRowContext(ctx, cmd,
 			func(r *sql.Row) error {
-				return r.Scan(&user.PrincipalID, &user.Username, &user.AuthType, &user.DefaultSchema, &user.DefaultLanguage, &sid, &user.SIDStr, &user.LoginName, &roles)
+				return r.Scan(&user.PrincipalID, &user.Username, &user.TypeStr, &user.AuthType, &user.DefaultSchema, &user.DefaultLanguage, &sid, &user.SIDStr, &user.LoginName, &roles)
 			},
 			sql.Named("database", database),
 			sql.Named("username", username),
@@ -87,15 +87,16 @@ func (c *Connector) CreateUser(ctx context.Context, database string, user *model
 	cmd := `DECLARE @stmt nvarchar(max)
 			DECLARE @language nvarchar(max) = @defaultLanguage
 			IF @language = '' SET @language = NULL
+			IF @typeStr = '' SET @typeStr = 'E'
 			IF @authType = 'INSTANCE'
 				BEGIN
 					SET @stmt = 'CREATE USER ' + QuoteName(@username) + ' FOR LOGIN ' + QuoteName(@loginName) + ' ' +
-											'WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema)
+								'WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema)
 				END
 			IF @authType = 'DATABASE'
 				BEGIN
 					SET @stmt = 'CREATE USER ' + QuoteName(@username) + ' WITH PASSWORD = ' + QuoteName(@password, '''') + ', ' +
-											'DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema)
+								'DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema)
 					IF NOT @@VERSION LIKE 'Microsoft SQL Azure%'
 						BEGIN
 							SET @stmt = @stmt + ', DEFAULT_LANGUAGE = ' + Coalesce(QuoteName(@language), 'NONE')
@@ -107,7 +108,7 @@ func (c *Connector) CreateUser(ctx context.Context, database string, user *model
 						BEGIN
 							IF @objectId != ''
 								BEGIN
-									SET @stmt = 'CREATE USER ' + QuoteName(@username) + ' WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema) + ', SID = ' + CONVERT(varchar(64), CAST(CAST(@objectId AS UNIQUEIDENTIFIER) AS VARBINARY(16)), 1) + ', TYPE=E'
+									SET @stmt = 'CREATE USER ' + QuoteName(@username) + ' WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema) + ', SID = ' + CONVERT(varchar(64), CAST(CAST(@objectId AS UNIQUEIDENTIFIER) AS VARBINARY(16)), 1) + ', TYPE = ' + @typeStr
 								END
 							ELSE
 								BEGIN
@@ -117,8 +118,8 @@ func (c *Connector) CreateUser(ctx context.Context, database string, user *model
 					ELSE
 						BEGIN
 							SET @stmt = 'CREATE USER ' + QuoteName(@username) + ' FOR LOGIN ' + QuoteName(@username) + ' FROM EXTERNAL PROVIDER ' +
-													'WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema) + ', ' +
-													'DEFAULT_LANGUAGE = ' + Coalesce(QuoteName(@language), 'NONE')
+										'WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema) + ', ' +
+										'DEFAULT_LANGUAGE = ' + Coalesce(QuoteName(@language), 'NONE')
 						END
 				END
 
@@ -183,6 +184,7 @@ func (c *Connector) CreateUser(ctx context.Context, database string, user *model
 			sql.Named("loginName", user.LoginName),
 			sql.Named("password", user.Password),
 			sql.Named("authType", user.AuthType),
+			sql.Named("typeStr", user.TypeStr),
 			sql.Named("defaultSchema", user.DefaultSchema),
 			sql.Named("defaultLanguage", user.DefaultLanguage),
 			sql.Named("roles", strings.Join(user.Roles, ",")),
@@ -195,6 +197,10 @@ func (c *Connector) UpdateUser(ctx context.Context, database string, user *model
 			DECLARE @language nvarchar(max) = @defaultLanguage
 			IF @language = '' SET @language = NULL
 			SET @stmt = @stmt + 'WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema)
+			IF @password != ''
+				BEGIN
+					SET @stmt = @stmt + ', PASSWORD = ' + QuoteName(@password, '''')
+				END
 			DECLARE @auth_type nvarchar(max) = (SELECT authentication_type_desc FROM [sys].[database_principals] WHERE name = @username)
 			IF NOT @@VERSION LIKE 'Microsoft SQL Azure%' AND @auth_type != 'INSTANCE'
 				BEGIN
@@ -262,6 +268,7 @@ func (c *Connector) UpdateUser(ctx context.Context, database string, user *model
 		ExecContext(ctx, cmd,
 			sql.Named("database", database),
 			sql.Named("username", user.Username),
+			sql.Named("password", user.Password),
 			sql.Named("defaultSchema", user.DefaultSchema),
 			sql.Named("defaultLanguage", user.DefaultLanguage),
 			sql.Named("roles", strings.Join(user.Roles, ",")),
@@ -311,5 +318,8 @@ func (c *Connector) DeleteUser(ctx context.Context, database, username string) e
 			EXEC (@stmt)`
 	return c.
 		setDatabase(&database).
-		ExecContext(ctx, cmd, sql.Named("database", database), sql.Named("username", username))
+		ExecContext(ctx, cmd,
+			sql.Named("database", database),
+			sql.Named("username", username),
+		)
 }

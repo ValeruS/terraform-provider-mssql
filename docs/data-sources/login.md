@@ -1,6 +1,6 @@
 # mssql_login (Data Source)
 
-The `mssql_login` obtains information about SQL login.
+The `mssql_login` obtains information about a login in SQL Server.
 
 ## Example Usage
 

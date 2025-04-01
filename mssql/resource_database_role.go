@@ -33,19 +33,19 @@ func resourceDatabaseRole() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "master",
+				Default:  defaultDatabaseDefault,
 			},
 			roleNameProp: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type:         schema.TypeString,
+				Required:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			ownerNameProp: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Default:  defaultOwnerNameDefault,
+				Default:  defaultDboPropDefault,
 				DiffSuppressFunc: func(k, old, new string, data *schema.ResourceData) bool {
-					return (old == "" && new == defaultOwnerNameDefault) || (old == defaultOwnerNameDefault && new == "")
+					return (old == "" && new == defaultDboPropDefault) || (old == defaultDboPropDefault && new == "")
 				},
 			},
 			ownerIdProp: {
@@ -59,7 +59,7 @@ func resourceDatabaseRole() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: defaultTimeout,
-			Read: defaultTimeout,
+			Read:   defaultTimeout,
 			Update: defaultTimeout,
 			Delete: defaultTimeout,
 		},
@@ -71,11 +71,36 @@ type DatabaseRoleConnector interface {
 	GetDatabaseRole(ctx context.Context, database, roleName string) (*model.DatabaseRole, error)
 	UpdateDatabaseRole(ctx context.Context, database string, roleId int, roleName string, ownerName string) error
 	DeleteDatabaseRole(ctx context.Context, database, roleName string) error
+	DatabaseExists(ctx context.Context, database string) (bool, error)
+}
+
+func resourceDatabaseRoleCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	logger := loggerFromMeta(meta, "role", "create")
+	logger.Debug().Msgf("Create %s", getDatabaseRoleID(data))
+
+	database := data.Get(databaseProp).(string)
+	roleName := data.Get(roleNameProp).(string)
+	ownerName := data.Get(ownerNameProp).(string)
+
+	connector, err := getDatabaseRoleConnector(meta, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err = connector.CreateDatabaseRole(ctx, database, roleName, ownerName); err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to create role [%s].[%s]", database, roleName))
+	}
+
+	data.SetId(getDatabaseRoleID(data))
+
+	logger.Info().Msgf("created role [%s].[%s]", database, roleName)
+
+	return resourceDatabaseRoleRead(ctx, data, meta)
 }
 
 func resourceDatabaseRoleRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "role", "read")
-	logger.Debug().Msgf("Read %s", getDatabaseRoleID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	roleName := data.Get(roleNameProp).(string)
@@ -83,6 +108,17 @@ func resourceDatabaseRoleRead(ctx context.Context, data *schema.ResourceData, me
 	connector, err := getDatabaseRoleConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Check if database exists
+	exists, err := connector.DatabaseExists(ctx, database)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to check if database [%s] exists", database))
+	}
+	if !exists {
+		logger.Info().Msgf("Database [%s] does not exist", database)
+		data.SetId("")
+		return nil
 	}
 
 	role, err := connector.GetDatabaseRole(ctx, database, roleName)
@@ -113,33 +149,9 @@ func resourceDatabaseRoleRead(ctx context.Context, data *schema.ResourceData, me
 	return nil
 }
 
-func resourceDatabaseRoleCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	logger := loggerFromMeta(meta, "role", "create")
-	logger.Debug().Msgf("Create %s", getDatabaseRoleID(data))
-
-	database := data.Get(databaseProp).(string)
-	roleName := data.Get(roleNameProp).(string)
-	ownerName := data.Get(ownerNameProp).(string)
-
-	connector, err := getDatabaseRoleConnector(meta, data)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err = connector.CreateDatabaseRole(ctx, database, roleName, ownerName); err != nil {
-		return diag.FromErr(errors.Wrapf(err, "unable to create role [%s].[%s]", database, roleName))
-	}
-
-	data.SetId(getDatabaseRoleID(data))
-
-	logger.Info().Msgf("created role [%s].[%s]", database, roleName)
-
-	return resourceDatabaseRoleRead(ctx, data, meta)
-}
-
 func resourceDatabaseRoleDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "role", "delete")
-	logger.Debug().Msgf("Delete %s", getDatabaseRoleID(data))
+	logger.Debug().Msgf("Delete %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	roleName := data.Get(roleNameProp).(string)
@@ -162,12 +174,21 @@ func resourceDatabaseRoleDelete(ctx context.Context, data *schema.ResourceData, 
 
 func resourceDatabaseRoleUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "role", "update")
-	logger.Debug().Msgf("Update %s", getDatabaseRoleID(data))
+	logger.Debug().Msgf("Update %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	roleId := data.Get(principalIdProp).(int)
 	roleName := data.Get(roleNameProp).(string)
 	ownerName := data.Get(ownerNameProp).(string)
+
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{roleNameProp, ownerNameProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
+	}
 
 	connector, err := getDatabaseRoleConnector(meta, data)
 	if err != nil {
@@ -175,6 +196,12 @@ func resourceDatabaseRoleUpdate(ctx context.Context, data *schema.ResourceData, 
 	}
 
 	if err = connector.UpdateDatabaseRole(ctx, database, roleId, roleName, ownerName); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update role [%s].[%s]", database, roleName))
 	}
 
@@ -198,13 +225,13 @@ func resourceDatabaseRoleImport(ctx context.Context, data *schema.ResourceData, 
 	}
 
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 3 {
+	if len(parts) != 4 {
 		return nil, errors.New("invalid ID")
 	}
 	if err = data.Set(databaseProp, parts[1]); err != nil {
 		return nil, err
 	}
-	if err = data.Set(roleNameProp, parts[2]); err != nil {
+	if err = data.Set(roleNameProp, parts[3]); err != nil {
 		return nil, err
 	}
 

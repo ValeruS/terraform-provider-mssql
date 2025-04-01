@@ -50,23 +50,7 @@ func SQLIdentifierPassword(i interface{}, k string) (warnings []string, errors [
 	case regexp.MustCompile(`^.*[A-Z]+.*$`).MatchString(v) && regexp.MustCompile(`^.*[\W]+.*$`).MatchString(v) && regexp.MustCompile(`^.*[0-9]+.*$`).MatchString(v):
 		return
 	default:
-		errors = append(errors, fmt.Errorf("%q must contain characters from three of the categories - uppercase letters, lowercase letters, numbers and non-alphanumeric characters, got %v", k, v))
+		errors = append(errors, fmt.Errorf("%q must contain characters from three of the categories - uppercase letters, lowercase letters, numbers and non-alphanumeric characters", k))
 		return
 	}
-}
-
-func SQLAzureExternalDatasourceType(i interface{}, k string) (warnings []string, errors []error) {
-	v := i.(string)
-	found := false
-	for _, w := range []string{"BLOB_STORAGE", "RDBMS"} {
-		if v == w {
-			found = true
-		}
-	}
-	if !found {
-		errors = append(errors, fmt.Errorf(
-			"type must be one of BLOB_STORAGE or RDBMS. Got %q", v))
-	}
-
-	return
 }

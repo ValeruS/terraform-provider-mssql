@@ -87,7 +87,8 @@ func TestAccDatabaseCredential_Azure_Basic_update(t *testing.T) {
 }
 
 func testAccCheckDatabaseCredential(t *testing.T, name string, login string, data map[string]interface{}) string {
-	text := `resource "mssql_database_masterkey" "{{ .name }}" {
+	text := `
+			resource "mssql_database_masterkey" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
 					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}

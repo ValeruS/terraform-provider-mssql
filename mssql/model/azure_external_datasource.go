@@ -5,7 +5,7 @@ type AzureExternalDatasource struct {
 	DataSourceName string
 	DataSourceId   int
 	Location       string
-	TypeDesc       string
+	TypeStr        string
 	CredentialName string
 	CredentialId   int
 	RDatabaseName  string

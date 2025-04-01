@@ -11,17 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const defaultDatabaseProp = "default_database"
-const defaultDatabaseDefault = "master"
-const defaultLanguageProp = "default_language"
-
-type LoginConnector interface {
-	CreateLogin(ctx context.Context, name, password, sid, defaultDatabase, defaultLanguage string) error
-	GetLogin(ctx context.Context, name string) (*model.Login, error)
-	UpdateLogin(ctx context.Context, name, password, defaultDatabase, defaultLanguage string) error
-	DeleteLogin(ctx context.Context, name string) error
-}
-
 func resourceLogin() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceLoginCreate,
@@ -33,23 +22,23 @@ func resourceLogin() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			serverProp: {
-				Type:         schema.TypeList,
-				MaxItems:     1,
-				Required:     true,
+				Type:     schema.TypeList,
+				MaxItems: 1,
+				Required: true,
 				Elem: &schema.Resource{
 					Schema: getServerSchema(serverProp),
 				},
 			},
 			loginNameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			passwordProp: {
-				Type:      schema.TypeString,
-				Required:  true,
-				Sensitive: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
 			},
 			sidStrProp: {
@@ -80,11 +69,18 @@ func resourceLogin() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: defaultTimeout,
-			Read: defaultTimeout,
+			Read:   defaultTimeout,
 			Update: defaultTimeout,
 			Delete: defaultTimeout,
 		},
 	}
+}
+
+type LoginConnector interface {
+	CreateLogin(ctx context.Context, name, password, sid, defaultDatabase, defaultLanguage string) error
+	GetLogin(ctx context.Context, name string) (*model.Login, error)
+	UpdateLogin(ctx context.Context, name, password, defaultDatabase, defaultLanguage string) error
+	DeleteLogin(ctx context.Context, name string) error
 }
 
 func resourceLoginCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -115,7 +111,7 @@ func resourceLoginCreate(ctx context.Context, data *schema.ResourceData, meta in
 
 func resourceLoginRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "login", "read")
-	logger.Debug().Msgf("Read %s", getLoginID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	loginName := data.Get(loginNameProp).(string)
 
@@ -158,14 +154,31 @@ func resourceLoginUpdate(ctx context.Context, data *schema.ResourceData, meta in
 	defaultDatabase := data.Get(defaultDatabaseProp).(string)
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{passwordProp, defaultDatabaseProp, defaultLanguageProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
+	}
+
 	connector, err := getLoginConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if err = connector.UpdateLogin(ctx, loginName, password, defaultDatabase, defaultLanguage); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update login [%s]", loginName))
 	}
+
+	data.SetId(getLoginID(data))
 
 	logger.Info().Msgf("updated login [%s]", loginName)
 
@@ -208,10 +221,10 @@ func resourceLoginImport(ctx context.Context, data *schema.ResourceData, meta in
 	}
 
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 2 {
+	if len(parts) != 3 {
 		return nil, errors.New("invalid ID")
 	}
-	if err = data.Set(loginNameProp, parts[1]); err != nil {
+	if err = data.Set(loginNameProp, parts[2]); err != nil {
 		return nil, err
 	}
 

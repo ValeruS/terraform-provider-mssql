@@ -18,7 +18,7 @@ func TestAccDataDatabaseCredential_Azure_Basic(t *testing.T) {
 			{
 				Config: testAccCheckDataCredential(t, "data_azure_test", "azure", map[string]interface{}{"database": "testdb", "credential_name": "test_scoped_data_cred", "identity_name": "test_identity_data_name", "secret": "V3ryS3cretP@asswd", "password": "V3ryS3cretP@asswd!Key"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_database_credential.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/test_scoped_data_cred"),
+					resource.TestCheckResourceAttr("data.mssql_database_credential.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/credential/test_scoped_data_cred"),
 					resource.TestCheckResourceAttr("data.mssql_database_credential.data_azure_test", "database", "testdb"),
 					resource.TestCheckResourceAttr("data.mssql_database_credential.data_azure_test", "credential_name", "test_scoped_data_cred"),
 					resource.TestCheckResourceAttr("data.mssql_database_credential.data_azure_test", "server.#", "1"),

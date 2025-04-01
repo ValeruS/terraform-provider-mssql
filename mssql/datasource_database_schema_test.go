@@ -19,7 +19,7 @@ func TestAccDataDatabaseSchema_Local_Basic(t *testing.T) {
 			{
 				Config: testAccCheckDataSchema(t, "data_local_test", "login", map[string]interface{}{"schema_name": "data_test_schema"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_database_schema.data_local_test", "id", "sqlserver://localhost:1433/master/data_test_schema"),
+					resource.TestCheckResourceAttr("data.mssql_database_schema.data_local_test", "id", "sqlserver://localhost:1433/master/schema/data_test_schema"),
 					resource.TestCheckResourceAttr("data.mssql_database_schema.data_local_test", "database", "master"),
 					resource.TestCheckResourceAttr("data.mssql_database_schema.data_local_test", "schema_name", "data_test_schema"),
 					resource.TestCheckResourceAttr("data.mssql_database_schema.data_local_test", "server.#", "1"),
@@ -45,7 +45,7 @@ func TestAccDataDatabaseSchema_Azure_Basic(t *testing.T) {
 			{
 				Config: testAccCheckDataSchema(t, "data_azure_test", "azure", map[string]interface{}{"database": "testdb", "schema_name": "data_test_schema"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_database_schema.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/data_test_schema"),
+					resource.TestCheckResourceAttr("data.mssql_database_schema.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/schema/data_test_schema"),
 					resource.TestCheckResourceAttr("data.mssql_database_schema.data_azure_test", "database", "testdb"),
 					resource.TestCheckResourceAttr("data.mssql_database_schema.data_azure_test", "schema_name", "data_test_schema"),
 					resource.TestCheckResourceAttr("data.mssql_database_schema.data_azure_test", "server.#", "1"),

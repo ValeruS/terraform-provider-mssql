@@ -2,8 +2,7 @@
 
 # mssql_azure_external_datasource
 
-The `mssql_azure_external_datasource` resource creates and manages an external data source on a Azure SQL database.
-
+The `mssql_azure_external_datasource` resource allows you to create and manage external data sources in Azure SQL Database.
 
 ## Example Usage
 
@@ -58,7 +57,7 @@ The following arguments are supported:
 * `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
 * `data_source_name` - (Required) Specifies the name of the external data source being created. Changing this forces a new resource to be created.
 * `location` - (Required) Provides the connectivity protocol and path to the external data source. Changing this resource property modifies the existing resource.
-* `credential_name` - (Required) Specifies a database-scoped credential for authenticating to the external data source.
+* `credential_name` - (Required) Specifies a database-scoped credential for authenticating to the external data source. Changing this resource property modifies the existing resource.
 * `type` - (Required) Specifies the type of the external data source being configured. One of either `RDBMS` or `BLOB_STORAGE` must be specified. Changing this forces a new resource to be created.
 * `remote_database_name` - (Optional) The name of the remote database on the server provided using `location`. Configure this argument when the `type` is set to `RDBMS`. Changing this resource property modifies the existing resource.
 
@@ -105,5 +104,5 @@ Before importing `mssql_azure_external_datasource`, you must to configure the au
 After that you can import the SQL Server database scoped credential using the server URL and `data source name`, e.g.
 
 ```shell
-terraform import mssql_azure_external_datasource.example 'mssql://example-sql-server.database.windows.net/example-db/data_source_name'
+terraform import mssql_azure_external_datasource.example 'mssql://example-sql-server.database.windows.net/example-db/externaldatasource/data_source_name'
 ```

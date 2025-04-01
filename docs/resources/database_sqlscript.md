@@ -1,41 +1,46 @@
-# mssql_database_role
+# mssql_database_sqlscript
 
-The `mssql_database_schema` resource allows you to create and manage database schemas in SQL Server.
+The `mssql_database_sqlscript` resource allows you to execute SQL scripts against a Microsoft SQL Server database. This resource is useful for managing database objects through SQL scripts, such as creating tables, views, stored procedures, or any other database objects.
 
 ## Example Usage
 
-### Basic usage
-
 ```hcl
-resource "mssql_database_schema" "example" {
+# Execute an inline SQL script
+resource "mssql_database_sqlscript" "create_table" {
   server {
-    host = "example-sql-server.database.windows.net"
+    host = "sqlserver.example.com"
     azure_login {
       tenant_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       client_secret = "terriblySecretSecret"
     }
   }
-  database      = "master"
-  schema_name     = "example-schema-name"
+
+  database  = "MyDatabase"
+  sqlscript = base64encode(<<-SQL
+    CREATE TABLE Users (
+      ID INT PRIMARY KEY,
+      Name NVARCHAR(100),
+      Email NVARCHAR(255)
+    )
+  SQL
+  )
+  verify_object = "TABLE Users"
 }
-```
 
-### Using AUTHORIZATION
-
-```hcl
-resource "mssql_database_role" "example" {
+# Execute a SQL script from a file
+resource "mssql_database_sqlscript" "setup_stored_proc" {
   server {
-    host = "example-sql-server.database.windows.net"
-    azure_login {
-      tenant_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      client_secret = "terriblySecretSecret"
+    host = "sqlserver.example.com"
+    login {
+      username = "admin"
+      password = "password123"
     }
   }
-  database   = "my-database"
-  schema_name  = "example-schema-name"
-  owner_name = "example_username"
+
+  database      = "MyDatabase"
+  sqlscript     = filebase64("scripts/stored_procedure.sql")
+  verify_object = "PROCEDURE GetUsers"
 }
 ```
 
@@ -44,9 +49,15 @@ resource "mssql_database_role" "example" {
 The following arguments are supported:
 
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
-* `schema_name` - (Required) The name of the schema. Changing this forces a new resource to be created.
-* `database` - (Optional) The schema will be created in this database. Defaults to `master`. Changing this forces a new resource to be created.
-* `owner_name` - (Optional) Is the database user that is to own the new schema. Changing this resource property modifies the existing resource.
+* `database` - (Required) The name of the database where the script will be executed. Changing this forces a new resource to be created.
+* `sqlscript` - (Required) The SQL script to execute. Must be in base64 format. Changing this resource property modifies the existing resource.
+* `verify_object` - (Required) Object to verify existence after script execution. Format: 'TYPE NAME' (e.g., 'TABLE Users'). Supported types:
+    * `TABLE`
+    * `VIEW`
+    * `PROCEDURE` or `PROC`
+    * `FUNCTION` or `FUNC`
+    * `SCHEMA`
+    * `TRIGGER` or `TRG`
 
 The `server` block supports the following arguments:
 
@@ -76,21 +87,28 @@ The `azuread_managed_identity_auth` block supports the following arguments:
 
 ## Attribute Reference
 
-The following attributes are exported:
+In addition to the arguments listed above, the following computed attributes are exported:
 
-* `schema_id` - The schema id of this database schema.
-* `owner_name` - The database user name that is own the schema.
-* `owning_principal_id` - The database user id that is own the role.
+* `id` - The ID of the SQL script resource.
 
 ## Import
 
-Before importing `mssql_database_schema`, you must to configure the authentication to your sql server:
+Before importing `mssql_database_sqlscript`, you must to configure the authentication to your sql server:
 
 1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
 2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
 
-After that you can import the SQL Server database role using the server URL and `role name`, e.g.
+After that you can import the SQL script using the server URL and `base64(databasename:verify_object)`, e.g.
 
 ```shell
-terraform import mssql_database_schema.example 'mssql://example-sql-server.database.windows.net/example-db/chema/schema_name'
+terraform import mssql_database_sqlscript.example 'mssql://example-sql-server.database.windows.net/MyDatabase/sqlscript/TXlEYXRhYmFzZTpUQUJMRSBVc2Vycw=='
 ```
+
+Note: The base64 string in the example above represents "MyDatabase:TABLE Users"
+
+## Notes
+
+1. The script is executed exactly as provided, so ensure proper error handling and idempotency in your SQL scripts.
+2. The `verify_object` field is used to check if the script execution was successful by verifying the existence of a specific database object.
+3. On deletion, no action is taken as the script has already been executed and the objects created by it remain in the database.
+4. The resource supports both inline scripts and file-based scripts.

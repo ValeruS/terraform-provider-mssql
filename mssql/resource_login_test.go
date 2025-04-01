@@ -296,7 +296,8 @@ func TestAccLogin_Azure_UpdatePassword(t *testing.T) {
 }
 
 func testAccCheckLogin(t *testing.T, name string, azure bool, data map[string]interface{}) string {
-	text := `resource "mssql_login" "{{ .name }}" {
+	text := `
+			resource "mssql_login" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
 					{{ if .azure }}azure_login {}{{ else }}login {}{{ end }}
@@ -307,6 +308,7 @@ func testAccCheckLogin(t *testing.T, name string, azure bool, data map[string]in
 				{{ with .default_database }}default_database = "{{ . }}"{{ end }}
 				{{ with .default_language }}default_language = "{{ . }}"{{ end }}
 			}`
+
 	data["name"] = name
 	data["azure"] = azure
 	if azure {

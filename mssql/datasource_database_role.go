@@ -25,12 +25,12 @@ func dataSourceDatabaseRole() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "master",
+				Default:  defaultDatabaseDefault,
 			},
 			roleNameProp: {
-				Type:        schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			ownerNameProp: {
@@ -54,7 +54,7 @@ func dataSourceDatabaseRole() *schema.Resource {
 
 func dataSourceDatabaseRoleRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "role", "read")
-	logger.Debug().Msgf("Read %s", getDatabaseRoleID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	roleName := data.Get(roleNameProp).(string)

@@ -21,7 +21,7 @@ The following arguments are supported:
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `login_name` - (Required) The name of the server login. Changing this forces a new resource to be created.
 * `password` - (Required) The password of the server login.
-* `sid` - (Optional) The security identifier (SID).Changing this forces a new resource to be created.
+* `sid` - (Optional) The SID (Security Identifier) in SQL Server is a unique identifier that represents a login at the server level. Changing this forces a new resource to be created.
 * `default_database` - (Optional) The default database of this server login. Defaults to `master`. This argument does not apply to Azure SQL Database.
 * `default_language` - (Optional) The default language of this server login. Defaults to `us_english`. This argument does not apply to Azure SQL Database.
 
@@ -68,5 +68,5 @@ Before importing `mssql_login`, you must to configure the authentication to your
 After that you can import the SQL Server login using the server URL and `login name`, e.g.
 
 ```shell
-terraform import mssql_login.example 'mssql://example-sql-server.database.windows.net/testlogin'
+terraform import mssql_login.example 'mssql://example-sql-server.database.windows.net/login/login_name'
 ```

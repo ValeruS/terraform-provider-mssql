@@ -11,7 +11,7 @@ import (
 
 func dataSourceDatabaseSchema() *schema.Resource {
 	return &schema.Resource{
-		ReadContext:   dataSourceDatabaseSchemaRead,
+		ReadContext: dataSourceDatabaseSchemaRead,
 		Schema: map[string]*schema.Schema{
 			serverProp: {
 				Type:     schema.TypeList,
@@ -25,12 +25,12 @@ func dataSourceDatabaseSchema() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "master",
+				Default:  defaultDatabaseDefault,
 			},
 			schemaNameProp: {
-				Type:        schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			ownerNameProp: {
@@ -54,7 +54,7 @@ func dataSourceDatabaseSchema() *schema.Resource {
 
 func dataSourceDatabaseSchemaRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "schema", "read")
-	logger.Debug().Msgf("Read %s", getDatabaseSchemaID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	schemaName := data.Get(schemaNameProp).(string)

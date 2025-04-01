@@ -2,20 +2,16 @@ package mssql
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/pkg/errors"
 )
-
-const datasourcenameProp = "data_source_name"
-const datasourceIdProp = "data_source_id"
-const locationProp = "location"
-const typedescProp = "type"
-const rdatabasenameProp = "remote_database_name"
 
 func resourceAzureExternalDatasource() *schema.Resource {
 	return &schema.Resource{
@@ -42,9 +38,9 @@ func resourceAzureExternalDatasource() *schema.Resource {
 				ForceNew: true,
 			},
 			datasourcenameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			datasourceIdProp: {
@@ -56,19 +52,19 @@ func resourceAzureExternalDatasource() *schema.Resource {
 				Required: true,
 			},
 			credentialNameProp: {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Required:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
-			typedescProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-				ValidateFunc: validate.SQLAzureExternalDatasourceType,
+			typeStrProp: {
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.StringInSlice([]string{"BLOB_STORAGE", "RDBMS"}, false),
 			},
 			rdatabasenameProp: {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			credentialIdProp: {
@@ -76,9 +72,21 @@ func resourceAzureExternalDatasource() *schema.Resource {
 				Computed: true,
 			},
 		},
+		CustomizeDiff: func(ctx context.Context, data *schema.ResourceDiff, m interface{}) error {
+			typeStr := data.Get(typeStrProp).(string)
+			rdatabasename := data.Get(rdatabasenameProp).(string)
+			
+			if typeStr == "RDBMS" && rdatabasename == "" {
+				return fmt.Errorf("%q is required when type is RDBMS", rdatabasenameProp)
+			}
+			if typeStr == "BLOB_STORAGE" && rdatabasename != "" {
+				return fmt.Errorf("%q is not required when type is BLOB_STORAGE", rdatabasenameProp)
+			}
+			return nil
+		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: defaultTimeout,
-			Read: defaultTimeout,
+			Read:   defaultTimeout,
 			Update: defaultTimeout,
 			Delete: defaultTimeout,
 		},
@@ -87,10 +95,11 @@ func resourceAzureExternalDatasource() *schema.Resource {
 
 type AzureExternalDatasourceConnector interface {
 	GetMSSQLVersion(ctx context.Context) (string, error)
-	CreateAzureExternalDatasource(ctx context.Context, database, datasourcename, location, credentialname, typedesc, rdatabasename string) error
+	CreateAzureExternalDatasource(ctx context.Context, database, datasourcename, location, credentialname, typestr, rdatabasename string) error
 	GetAzureExternalDatasource(ctx context.Context, database, datasourcename string) (*model.AzureExternalDatasource, error)
 	UpdateAzureExternalDatasource(ctx context.Context, database, datasourcename, location, credentialname, rdatabasename string) error
 	DeleteAzureExternalDatasource(ctx context.Context, database, datasourcename string) error
+	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
 
 func resourceAzureExternalDatasourceCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -101,12 +110,8 @@ func resourceAzureExternalDatasourceCreate(ctx context.Context, data *schema.Res
 	datasourcename := data.Get(datasourcenameProp).(string)
 	location := data.Get(locationProp).(string)
 	credentialname := data.Get(credentialNameProp).(string)
-	typedesc := data.Get(typedescProp).(string)
+	typestr := data.Get(typeStrProp).(string)
 	rdatabasename := data.Get(rdatabasenameProp).(string)
-
-	if (rdatabasename == "") && (typedesc == "RDBMS") {
-		return diag.Errorf(rdatabasenameProp + " cannot be empty")
-	}
 
 	connector, err := getAzureExternalDatasourceConnector(meta, data)
 	if err != nil {
@@ -115,13 +120,13 @@ func resourceAzureExternalDatasourceCreate(ctx context.Context, data *schema.Res
 
 	mssqlversion, err := connector.GetMSSQLVersion(ctx)
 	if err != nil {
-			return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
+		return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
 	}
 	if !strings.Contains(mssqlversion, "Microsoft SQL Azure") {
 		return diag.Errorf("The database is not an Azure SQL Database.")
 	}
 
-	if err = connector.CreateAzureExternalDatasource(ctx, database, datasourcename, location, credentialname, typedesc, rdatabasename); err != nil {
+	if err = connector.CreateAzureExternalDatasource(ctx, database, datasourcename, location, credentialname, typestr, rdatabasename); err != nil {
 		return diag.FromErr(errors.Wrapf(err, "unable to create external data source [%s] on database [%s]", datasourcename, database))
 	}
 
@@ -144,9 +149,20 @@ func resourceAzureExternalDatasourceRead(ctx context.Context, data *schema.Resou
 		return diag.FromErr(err)
 	}
 
+	// Check if database exists
+	exists, err := connector.DatabaseExists(ctx, database)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to check if database [%s] exists", database))
+	}
+	if !exists {
+		logger.Info().Msgf("Database [%s] does not exist", database)
+		data.SetId("")
+		return nil
+	}
+
 	mssqlversion, err := connector.GetMSSQLVersion(ctx)
 	if err != nil {
-			return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
+		return diag.FromErr(errors.Wrap(err, "unable to get MSSQL version"))
 	}
 	if !strings.Contains(mssqlversion, "Microsoft SQL Azure") {
 		return diag.Errorf("The database is not an Azure SQL Database.")
@@ -169,7 +185,7 @@ func resourceAzureExternalDatasourceRead(ctx context.Context, data *schema.Resou
 		if err = data.Set(locationProp, extdatasource.Location); err != nil {
 			return diag.FromErr(err)
 		}
-		if err = data.Set(typedescProp, extdatasource.TypeDesc); err != nil {
+		if err = data.Set(typeStrProp, extdatasource.TypeStr); err != nil {
 			return diag.FromErr(err)
 		}
 		if err = data.Set(credentialNameProp, extdatasource.CredentialName); err != nil {
@@ -188,7 +204,7 @@ func resourceAzureExternalDatasourceRead(ctx context.Context, data *schema.Resou
 
 func resourceAzureExternalDatasourceUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "azureexternaldatasource", "update")
-	logger.Debug().Msgf("Update %s", getDatabaseCredentialID(data))
+	logger.Debug().Msgf("Update %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	datasourcename := data.Get(datasourcenameProp).(string)
@@ -196,12 +212,27 @@ func resourceAzureExternalDatasourceUpdate(ctx context.Context, data *schema.Res
 	credentialname := data.Get(credentialNameProp).(string)
 	rdatabasename := data.Get(rdatabasenameProp).(string)
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{locationProp, credentialNameProp, rdatabasenameProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			oldValues[prop] = oldValue
+		}
+	}
+
 	connector, err := getAzureExternalDatasourceConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if err = connector.UpdateAzureExternalDatasource(ctx, database, datasourcename, location, credentialname, rdatabasename); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update external data source [%s] on database [%s]", datasourcename, database))
 	}
 
@@ -248,13 +279,13 @@ func resourceAzureExternalDatasourceImport(ctx context.Context, data *schema.Res
 	}
 
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 3 {
+	if len(parts) != 4 {
 		return nil, errors.New("invalid ID")
 	}
 	if err = data.Set(databaseProp, parts[1]); err != nil {
 		return nil, err
 	}
-	if err = data.Set(datasourcenameProp, parts[2]); err != nil {
+	if err = data.Set(datasourcenameProp, parts[3]); err != nil {
 		return nil, err
 	}
 
@@ -278,11 +309,11 @@ func resourceAzureExternalDatasourceImport(ctx context.Context, data *schema.Res
 
 	extdatasource, err := connector.GetAzureExternalDatasource(ctx, database, datasourcename)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to import external data source [%s] on database [%s]",datasourcename, database)
+		return nil, errors.Wrapf(err, "unable to import external data source [%s] on database [%s]", datasourcename, database)
 	}
 
 	if extdatasource == nil {
-		return nil, errors.Errorf("no external data source found [%s] on database [%s] for import",datasourcename, database)
+		return nil, errors.Errorf("no external data source found [%s] on database [%s] for import", datasourcename, database)
 	}
 
 	if err = data.Set(datasourcenameProp, extdatasource.DataSourceName); err != nil {
@@ -291,7 +322,7 @@ func resourceAzureExternalDatasourceImport(ctx context.Context, data *schema.Res
 	if err = data.Set(locationProp, extdatasource.Location); err != nil {
 		return nil, err
 	}
-	if err = data.Set(typedescProp, extdatasource.TypeDesc); err != nil {
+	if err = data.Set(typeStrProp, extdatasource.TypeStr); err != nil {
 		return nil, err
 	}
 	if err = data.Set(credentialNameProp, extdatasource.CredentialName); err != nil {

@@ -28,9 +28,9 @@ func dataSourceDatabasePermissions() *schema.Resource {
 				ForceNew: true,
 			},
 			usernameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			principalIdProp: {
@@ -53,7 +53,7 @@ func dataSourceDatabasePermissions() *schema.Resource {
 
 func dataSourceDatabasePermissionsRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	logger := loggerFromMeta(meta, "databasepermissions", "read")
-	logger.Debug().Msgf("Read %s", getDatabasePermissionsID(data))
+	logger.Debug().Msgf("Read %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
 	username := data.Get(usernameProp).(string)

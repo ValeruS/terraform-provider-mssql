@@ -1,6 +1,6 @@
 # mssql_database_masterkey
 
-The `mssql_database_masterkey` resource create a database master key in the database on a SQL Server.
+The `mssql_database_masterkey` resource manages the creation and configuration of database master keys (DMKs) in SQL Server databases.
 
 ## Example Usage
 

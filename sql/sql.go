@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	mssql "github.com/microsoft/go-mssqldb"
@@ -184,7 +184,7 @@ func (c *Connector) connector() (driver.Connector, error) {
 			RawQuery: query.Encode(),
 		}).String()
 		if c.Login != nil {
-				return mssql.NewConnector(connectionString)
+			return mssql.NewConnector(connectionString)
 		}
 		return mssql.NewAccessTokenConnector(connectionString, func() (string, error) { return c.tokenProvider() })
 	}
@@ -215,24 +215,26 @@ func (c *Connector) tokenProvider() (string, error) {
 	const resourceID = "https://database.windows.net/"
 
 	admin := c.AzureLogin
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, admin.TenantID)
+	cred, err := azidentity.NewClientSecretCredential(
+		admin.TenantID,
+		admin.ClientID,
+		admin.ClientSecret,
+		nil,
+	)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create credential: %v", err)
 	}
 
-	spt, err := adal.NewServicePrincipalToken(*oauthConfig, admin.ClientID, admin.ClientSecret, resourceID)
+	token, err := cred.GetToken(context.Background(), policy.TokenRequestOptions{
+		Scopes: []string{resourceID + "/.default"},
+	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get token: %v", err)
 	}
 
-	err = spt.EnsureFresh()
-	if err != nil {
-		return "", err
-	}
+	c.Token = token.Token
 
-	c.Token = spt.OAuthToken()
-
-	return spt.OAuthToken(), nil
+	return token.Token, nil
 }
 
 func connectLoop(connector driver.Connector, timeout time.Duration) (*sql.DB, error) {
@@ -288,4 +290,36 @@ func (c *Connector) setDatabase(database *string) *Connector {
 	}
 	c.Database = *database
 	return c
+}
+
+func (c *Connector) GetMSSQLVersion(ctx context.Context) (string, error) {
+	var version string
+	err := c.QueryRowContext(ctx,"SELECT @@VERSION", func(r *sql.Row) error {
+		return r.Scan(&version)
+	},)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		return "", err
+	}
+	return version, nil
+}
+
+// DatabaseExists checks if a database exists in SQL Server
+func (c *Connector) DatabaseExists(ctx context.Context, database string) (bool, error) {
+	cmd := `
+		SELECT COUNT(1) 
+		FROM sys.databases 
+		WHERE name = @p1
+	`
+	var count int
+	err := c.QueryRowContext(ctx, cmd, func(r *sql.Row) error {
+		return r.Scan(&count)
+	}, sql.Named("p1", database))
+	if err != nil {
+		return false, errors.Wrapf(err, "error checking if database [%s] exists", database)
+	}
+	
+	return count > 0, nil
 }

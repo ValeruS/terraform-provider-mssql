@@ -37,9 +37,9 @@ func resourceDatabasePermissions() *schema.Resource {
 				ForceNew: true,
 			},
 			usernameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			principalIdProp: {
@@ -55,8 +55,10 @@ func resourceDatabasePermissions() *schema.Resource {
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{
-			Default: defaultTimeout,
-			Read: defaultTimeout,
+			Create: defaultTimeout,
+			Read:   defaultTimeout,
+			Update: defaultTimeout,
+			Delete: defaultTimeout,
 		},
 	}
 }
@@ -66,6 +68,7 @@ type DatabasePermissionsConnector interface {
 	GetDatabasePermissions(ctx context.Context, database string, username string) (*model.DatabasePermissions, error)
 	UpdateDatabasePermissions(ctx context.Context, dbPermission *model.DatabasePermissions) error
 	DeleteDatabasePermissions(ctx context.Context, dbPermission *model.DatabasePermissions) error
+	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
 
 func resourceDatabasePermissionsCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -84,8 +87,8 @@ func resourceDatabasePermissionsCreate(ctx context.Context, data *schema.Resourc
 
 	dbPermissionModel := &model.DatabasePermissions{
 		DatabaseName: database,
-		UserName:  username,
-		Permissions:  toStringSlice(permissions),
+		UserName: username,
+		Permissions: toStringSlice(permissions),
 	}
 	if err = connector.CreateDatabasePermissions(ctx, dbPermissionModel); err != nil {
 		return diag.FromErr(errors.Wrapf(err, "unable to create database permissions %v on database [%s] for user [%s]", string(permissions_), database, username))
@@ -108,6 +111,17 @@ func resourceDatabasePermissionsRead(ctx context.Context, data *schema.ResourceD
 	connector, err := getDatabasePermissionsConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Check if database exists
+	exists, err := connector.DatabaseExists(ctx, database)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "unable to check if database [%s] exists", database))
+	}
+	if !exists {
+		logger.Info().Msgf("Database [%s] does not exist", database)
+		data.SetId("")
+		return nil
 	}
 
 	permissions, err := connector.GetDatabasePermissions(ctx, database, username)
@@ -143,6 +157,15 @@ func resourceDatabasePermissionDelete(ctx context.Context, data *schema.Resource
 	username := data.Get(usernameProp).(string)
 	permissions := data.Get(permissionsProp).(*schema.Set).List()
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	if data.HasChange(permissionsProp) {
+		oldValue, _ := data.GetChange(permissionsProp)
+		if oldSet, ok := oldValue.(*schema.Set); ok {
+			oldValues[permissionsProp] = oldSet.List()
+		}
+	}
+
 	connector, err := getDatabasePermissionsConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
@@ -150,10 +173,16 @@ func resourceDatabasePermissionDelete(ctx context.Context, data *schema.Resource
 
 	dbPermissionModel := &model.DatabasePermissions{
 		DatabaseName: database,
-		UserName:  username,
-		Permissions:  toStringSlice(permissions),
+		UserName: username,
+		Permissions: toStringSlice(permissions),
 	}
 	if err = connector.DeleteDatabasePermissions(ctx, dbPermissionModel); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to delete permissions for user [%s] on database [%s]", username, database))
 	}
 
@@ -179,8 +208,8 @@ func resourceDatabasePermissionUpdate(ctx context.Context, data *schema.Resource
 
 	dbPermissionModel := &model.DatabasePermissions{
 		DatabaseName: database,
-		UserName:  username,
-		Permissions:  toStringSlice(permissions),
+		UserName: username,
+		Permissions: toStringSlice(permissions),
 	}
 	if err = connector.UpdateDatabasePermissions(ctx, dbPermissionModel); err != nil {
 		return diag.FromErr(errors.Wrapf(err, "unable to update permissions for user [%s] on database [%s]", username, database))
@@ -192,7 +221,6 @@ func resourceDatabasePermissionUpdate(ctx context.Context, data *schema.Resource
 
 	return resourceDatabasePermissionsRead(ctx, data, meta)
 }
-
 
 func resourceDatabasePermissionImport(ctx context.Context, data *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	logger := loggerFromMeta(meta, "databasepermissions", "import")
@@ -214,7 +242,7 @@ func resourceDatabasePermissionImport(ctx context.Context, data *schema.Resource
 	if err = data.Set(databaseProp, parts[1]); err != nil {
 		return nil, err
 	}
-	if err = data.Set(usernameProp, parts[2]); err != nil {
+	if err = data.Set(usernameProp, parts[3]); err != nil {
 		return nil, err
 	}
 

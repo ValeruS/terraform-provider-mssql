@@ -73,7 +73,7 @@ func TestAccDatabaseSchema_Azure_Basic_Create(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckSchemaDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckSchema(t, "azure_test_create", "azure", map[string]interface{}{"database":"testdb", "schema_name": "test_schema_create"}),
+				Config: testAccCheckSchema(t, "azure_test_create", "azure", map[string]interface{}{"database": "testdb", "schema_name": "test_schema_create"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckSchemaExists("mssql_database_schema.azure_test_create"),
 					resource.TestCheckResourceAttr("mssql_database_schema.azure_test_create", "database", "testdb"),
@@ -226,7 +226,8 @@ func TestAccDatabaseSchema_Azure_Basic_Update_owner(t *testing.T) {
 }
 
 func testAccCheckSchema(t *testing.T, name string, login string, data map[string]interface{}) string {
-	text := `{{ if .login_name }}
+	text := `
+			{{ if .login_name }}
 				resource "mssql_login" "{{ .name }}" {
 					server {
 						host = "{{ .host }}"

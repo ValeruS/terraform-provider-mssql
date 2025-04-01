@@ -19,7 +19,7 @@ func TestAccDataDatabasePermissions_Local_Basic(t *testing.T) {
 			{
 				Config: testAccCheckDataDataBasepermissions(t, "database", "login", map[string]interface{}{"database": "master", "username": "db_user_perm", "permissions": "[\"REFERENCES\", \"UPDATE\"]", "login_name": "db_login_perm", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_database_permissions.database", "id", "sqlserver://localhost:1433/master/db_user_perm/permissions"), //guess user principal-ID = 7
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.database", "id", "sqlserver://localhost:1433/master/permission/db_user_perm"),
 					resource.TestCheckResourceAttr("data.mssql_database_permissions.database", "database", "master"),
 					resource.TestCheckResourceAttr("data.mssql_database_permissions.database", "permissions.#", "2"),
 					resource.TestCheckResourceAttr("data.mssql_database_permissions.database", "permissions.0", "REFERENCES"),
@@ -47,7 +47,7 @@ func TestAccDataDatabasePermissions_Azure_Basic(t *testing.T) {
 			{
 				Config: testAccCheckDataDataBasepermissions(t, "data_azure_test", "azure", map[string]interface{}{"database": "testdb", "username": "azure_user_perm", "permissions": "[\"INSERT\", \"UPDATE\"]", "login_name": "azure_login_perm", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/azure_user_perm/permissions"),
+					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/permission/azure_user_perm"),
 					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "database", "testdb"),
 					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "permissions.#", "2"),
 					resource.TestCheckResourceAttr("data.mssql_database_permissions.data_azure_test", "permissions.0", "INSERT"),

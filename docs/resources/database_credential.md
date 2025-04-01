@@ -1,6 +1,6 @@
 # mssql_database_credential
 
-The `mssql_database_credential` resource create a database credential on a SQL Server.
+The `mssql_database_credential` resource allows you to create and manage database-scoped credentials in SQL Server.
 
 ## Example Usage
 
@@ -86,5 +86,5 @@ Before importing `mssql_database_credential`, you must to configure the authenti
 After that you can import the SQL Server database scoped credential using the server URL and `credential name`, e.g.
 
 ```shell
-terraform import mssql_database_credential.example 'mssql://example-sql-server.database.windows.net/example-db/credential_name'
+terraform import mssql_database_credential.example 'mssql://example-sql-server.database.windows.net/example-db/credential/credential_name'
 ```

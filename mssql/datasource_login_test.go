@@ -19,7 +19,7 @@ func TestAccDataLogin_Local_Basic(t *testing.T) {
 			{
 				Config: testAccDataLogin(t, "basic", false, map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_login.basic", "id", "sqlserver://localhost:1433/login_basic"),
+					resource.TestCheckResourceAttr("data.mssql_login.basic", "id", "sqlserver://localhost:1433/login/login_basic"),
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "login_name", "login_basic"),
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "server.#", "1"),
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "server.0.host", "localhost"),
@@ -45,7 +45,7 @@ func TestAccDataLogin_Azure_Basic(t *testing.T) {
 			{
 				Config: testAccDataLogin(t, "basic", true, map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_login.basic", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/login_basic"),
+					resource.TestCheckResourceAttr("data.mssql_login.basic", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/login/login_basic"),
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "login_name", "login_basic"),
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "server.#", "1"),
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "server.0.host", os.Getenv("TF_ACC_SQL_SERVER")),

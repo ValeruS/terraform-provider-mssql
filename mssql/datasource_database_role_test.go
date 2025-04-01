@@ -19,7 +19,7 @@ func TestAccDataDatabaseRole_Local_Basic(t *testing.T) {
 			{
 				Config: testAccCheckDataRole(t, "data_local_test", "login", map[string]interface{}{"role_name": "data_test_role"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_database_role.data_local_test", "id", "sqlserver://localhost:1433/master/data_test_role"),
+					resource.TestCheckResourceAttr("data.mssql_database_role.data_local_test", "id", "sqlserver://localhost:1433/master/role/data_test_role"),
 					resource.TestCheckResourceAttr("data.mssql_database_role.data_local_test", "database", "master"),
 					resource.TestCheckResourceAttr("data.mssql_database_role.data_local_test", "role_name", "data_test_role"),
 					resource.TestCheckResourceAttr("data.mssql_database_role.data_local_test", "server.#", "1"),
@@ -45,7 +45,7 @@ func TestAccDataDatabaseRole_Azure_Basic(t *testing.T) {
 			{
 				Config: testAccCheckDataRole(t, "data_azure_test", "azure", map[string]interface{}{"database": "testdb", "role_name": "data_test_role"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_database_role.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/data_test_role"),
+					resource.TestCheckResourceAttr("data.mssql_database_role.data_azure_test", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/testdb/role/data_test_role"),
 					resource.TestCheckResourceAttr("data.mssql_database_role.data_azure_test", "database", "testdb"),
 					resource.TestCheckResourceAttr("data.mssql_database_role.data_azure_test", "role_name", "data_test_role"),
 					resource.TestCheckResourceAttr("data.mssql_database_role.data_azure_test", "server.#", "1"),

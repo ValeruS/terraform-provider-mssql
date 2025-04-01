@@ -159,7 +159,8 @@ func TestAccDatabasePermissions_Azure_Basic(t *testing.T) {
 }
 
 func testAccCheckDatabasePermissions(t *testing.T, name string, login string, data map[string]interface{}) string {
-	text := `{{ if .login_name }}
+	text := `
+			{{ if .login_name }}
 				resource "mssql_login" "{{ .name }}" {
 					server {
 						host = "{{ .host }}"
@@ -191,6 +192,7 @@ func testAccCheckDatabasePermissions(t *testing.T, name string, login string, da
 				username = mssql_user.{{ .name }}.username
 				permissions  = {{ .permissions }}
 			}`
+
 	data["name"] = name
 	data["login"] = login
 	if login == "fedauth" || login == "msi" || login == "azure" {
