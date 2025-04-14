@@ -136,7 +136,7 @@ func TestAccUser_Azure_Database_Update_Password(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckUser(t, "azure_update", "azure", map[string]interface{}{"database": "testdb","username": "test_update_password", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
@@ -336,7 +336,7 @@ func TestAccUser_Local_Update_DefaultSchema(t *testing.T) {
 		PreCheck:          func() { testAccPreCheck(t) },
 		IsUnitTest:        runLocalAccTests,
 		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckUser(t, "update", "login", map[string]interface{}{"username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡"}),
@@ -363,7 +363,7 @@ func TestAccUser_Local_Update_DefaultLanguage(t *testing.T) {
 		PreCheck:          func() { testAccPreCheck(t) },
 		IsUnitTest:        runLocalAccTests,
 		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckUser(t, "update", "login", map[string]interface{}{"username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡"}),
@@ -390,7 +390,7 @@ func TestAccUser_Local_Update_Roles(t *testing.T) {
 		PreCheck:          func() { testAccPreCheck(t) },
 		IsUnitTest:        runLocalAccTests,
 		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckUser(t, "update", "login", map[string]interface{}{"username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡"}),
@@ -437,7 +437,7 @@ func TestAccUser_Azure_Update_DefaultSchema(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡"}),
@@ -463,7 +463,7 @@ func TestAccUser_Azure_Update_DefaultLanguage(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡"}),
@@ -489,7 +489,7 @@ func TestAccUser_Azure_Update_Roles(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡"}),
