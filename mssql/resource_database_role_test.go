@@ -158,19 +158,19 @@ func TestAccDatabaseRole_Local_Basic_Update_owner(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckRoleDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckRole(t, "local_test_update_auth", "login", map[string]interface{}{"database": "master", "role_name": "test_role_owner", "owner_name": "db_user_owner_role_pre", "username": "db_user_owner_role_pre", "login_name": "db_login_owner_pre", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
+				Config: testAccCheckRole(t, "local_test_update_owner", "login", map[string]interface{}{"database": "master", "role_name": "test_role_owner", "owner_name": "db_user_owner_role_pre", "username": "db_user_owner_role_pre", "login_name": "db_login_owner_pre", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoleExists("mssql_database_role.local_test_update_auth", Check{"owner_name", "==", "db_user_owner_role_pre"}),
-					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_auth", "role_name", "test_role_owner"),
-					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_auth", "owner_name", "db_user_owner_role_pre"),
+					testAccCheckRoleExists("mssql_database_role.local_test_update_owner", Check{"owner_name", "==", "db_user_owner_role_pre"}),
+					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_owner", "role_name", "test_role_owner"),
+					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_owner", "owner_name", "db_user_owner_role_pre"),
 				),
 			},
 			{
-				Config: testAccCheckRole(t, "local_test_update_auth", "login", map[string]interface{}{"database": "master", "role_name": "test_role_owner", "owner_name": "db_user_owner_role_post", "username": "db_user_owner_role_post", "login_name": "db_login_owner_post", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
+				Config: testAccCheckRole(t, "local_test_update_owner", "login", map[string]interface{}{"database": "master", "role_name": "test_role_owner", "owner_name": "db_user_owner_role_post", "username": "db_user_owner_role_post", "login_name": "db_login_owner_post", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoleExists("mssql_database_role.local_test_update_auth", Check{"owner_name", "==", "db_user_owner_role_post"}),
-					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_auth", "role_name", "test_role_owner"),
-					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_auth", "owner_name", "db_user_owner_role_post"),
+					testAccCheckRoleExists("mssql_database_role.local_test_update_owner", Check{"owner_name", "==", "db_user_owner_role_post"}),
+					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_owner", "role_name", "test_role_owner"),
+					resource.TestCheckResourceAttr("mssql_database_role.local_test_update_owner", "owner_name", "db_user_owner_role_post"),
 				),
 			},
 		},

@@ -18,7 +18,7 @@ func TestAccLogin_Local_Basic(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "basic", false, map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "basic", "login", map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckLoginExists("mssql_login.basic"),
 					testAccCheckLoginWorks("mssql_login.basic"),
@@ -48,7 +48,7 @@ func TestAccLogin_Local_Basic_Pass_Validate_Length(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "basic_pass_validate", false, map[string]interface{}{"login_name": "login_basic_pass_length", "password": "shotpas"}),
+				Config: testAccCheckLogin(t, "basic_pass_validate", "login", map[string]interface{}{"login_name": "login_basic_pass_length", "password": "shotpas"}),
 				ExpectError: regexp.MustCompile("length should equal to or greater than 8"),
 			},
 		},
@@ -63,7 +63,7 @@ func TestAccLogin_Local_Basic_SID(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "basic", false, map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡", "sid": "0xB7BDEF7990D03541BAA2AD73E4FF18E8"}),
+				Config: testAccCheckLogin(t, "basic", "login", map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡", "sid": "0xB7BDEF7990D03541BAA2AD73E4FF18E8"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckLoginExists("mssql_login.basic"),
 					testAccCheckLoginWorks("mssql_login.basic"),
@@ -93,7 +93,7 @@ func TestAccLogin_Azure_Basic(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "basic", true, map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "basic", "azure", map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckLoginExists("mssql_login.basic"),
 					resource.TestCheckResourceAttr("mssql_login.basic", "login_name", "login_basic"),
@@ -122,7 +122,7 @@ func TestAccLogin_Azure_Basic_SID(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "basic", true, map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡", "sid": "0x01060000000000640000000000000000BAF5FC800B97EF49AC6FD89469C4987F"}),
+				Config: testAccCheckLogin(t, "basic", "azure", map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡", "sid": "0x01060000000000640000000000000000BAF5FC800B97EF49AC6FD89469C4987F"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckLoginExists("mssql_login.basic"),
 					resource.TestCheckResourceAttr("mssql_login.basic", "login_name", "login_basic"),
@@ -153,7 +153,7 @@ func TestAccLogin_Local_UpdateLoginName(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "test_update", false, map[string]interface{}{"login_name": "login_update_pre", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "login", map[string]interface{}{"login_name": "login_update_pre", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "login_name", "login_update_pre"),
 					testAccCheckLoginExists("mssql_login.test_update"),
@@ -161,7 +161,7 @@ func TestAccLogin_Local_UpdateLoginName(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCheckLogin(t, "test_update", false, map[string]interface{}{"login_name": "login_update_post", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "login", map[string]interface{}{"login_name": "login_update_post", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "login_name", "login_update_post"),
 					testAccCheckLoginExists("mssql_login.test_update"),
@@ -179,7 +179,7 @@ func TestAccLogin_Local_UpdatePassword(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "test_update", false, map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "login", map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "password", "valueIsH8kd$¡"),
 					testAccCheckLoginExists("mssql_login.test_update"),
@@ -187,7 +187,7 @@ func TestAccLogin_Local_UpdatePassword(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCheckLogin(t, "test_update", false, map[string]interface{}{"login_name": "login_update", "password": "otherIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "login", map[string]interface{}{"login_name": "login_update", "password": "otherIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "password", "otherIsH8kd$¡"),
 					testAccCheckLoginExists("mssql_login.test_update"),
@@ -205,7 +205,7 @@ func TestAccLogin_Local_UpdateDefaultDatabase(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "test_update", false, map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "login", map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "default_database", "master"),
 					testAccCheckLoginExists("mssql_login.test_update", Check{"default_database", "==", "master"}),
@@ -213,7 +213,7 @@ func TestAccLogin_Local_UpdateDefaultDatabase(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCheckLogin(t, "test_update", false, map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡", "default_database": "tempdb"}),
+				Config: testAccCheckLogin(t, "test_update", "login", map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡", "default_database": "tempdb"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "default_database", "tempdb"),
 					testAccCheckLoginExists("mssql_login.test_update", Check{"default_database", "==", "tempdb"}),
@@ -231,7 +231,7 @@ func TestAccLogin_Local_UpdateDefaultLanguage(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "test_update", false, map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "login", map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "default_language", "us_english"),
 					testAccCheckLoginExists("mssql_login.test_update"),
@@ -239,7 +239,7 @@ func TestAccLogin_Local_UpdateDefaultLanguage(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCheckLogin(t, "test_update", false, map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡", "default_language": "russian"}),
+				Config: testAccCheckLogin(t, "test_update", "login", map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡", "default_language": "russian"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "default_language", "russian"),
 					testAccCheckLoginExists("mssql_login.test_update", Check{"default_language", "==", "russian"}),
@@ -256,14 +256,14 @@ func TestAccLogin_Azure_UpdateLoginName(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "test_update", true, map[string]interface{}{"login_name": "login_update_pre", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "azure", map[string]interface{}{"login_name": "login_update_pre", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "login_name", "login_update_pre"),
 					testAccCheckLoginExists("mssql_login.test_update"),
 				),
 			},
 			{
-				Config: testAccCheckLogin(t, "test_update", true, map[string]interface{}{"login_name": "login_update_post", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "azure", map[string]interface{}{"login_name": "login_update_post", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "login_name", "login_update_post"),
 					testAccCheckLoginExists("mssql_login.test_update"),
@@ -279,14 +279,14 @@ func TestAccLogin_Azure_UpdatePassword(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "test_update", true, map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "azure", map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "password", "valueIsH8kd$¡"),
 					testAccCheckLoginExists("mssql_login.test_update"),
 				),
 			},
 			{
-				Config: testAccCheckLogin(t, "test_update", true, map[string]interface{}{"login_name": "login_update", "password": "otherIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "azure", map[string]interface{}{"login_name": "login_update", "password": "otherIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "password", "otherIsH8kd$¡"),
 					testAccCheckLoginExists("mssql_login.test_update"),
@@ -295,12 +295,12 @@ func TestAccLogin_Azure_UpdatePassword(t *testing.T) {
 		}})
 }
 
-func testAccCheckLogin(t *testing.T, name string, azure bool, data map[string]interface{}) string {
+func testAccCheckLogin(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `
 			resource "mssql_login" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
-					{{ if .azure }}azure_login {}{{ else }}login {}{{ end }}
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				login_name = "{{ .login_name }}"
 				password   = "{{ .password }}"
@@ -310,11 +310,13 @@ func testAccCheckLogin(t *testing.T, name string, azure bool, data map[string]in
 			}`
 
 	data["name"] = name
-	data["azure"] = azure
-	if azure {
+	data["login"] = login
+	if login == "fedauth" || login == "msi" || login == "azure" {
 		data["host"] = os.Getenv("TF_ACC_SQL_SERVER")
-	} else {
+	} else if login == "login" {
 		data["host"] = "localhost"
+	} else {
+		t.Fatalf("login expected to be one of 'login', 'azure', 'msi', 'fedauth', got %s", login)
 	}
 	res, err := templateToString(name, text, data)
 	if err != nil {
