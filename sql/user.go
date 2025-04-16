@@ -75,6 +75,19 @@ func (c *Connector) GetUser(ctx context.Context, database, username string) (*mo
 			return nil, err
 		}
 	}
+	if user.AuthType == "EXTERNAL" && strings.Contains(user.SIDStr, "AADE") {
+		cmd = "SELECT name FROM [sys].[server_principals] WHERE type NOT IN ('G', 'R') AND CONVERT(varchar(64), sid, 1) = LEFT(CONVERT(varchar(64), @sid, 1), 34)"
+		c.Database = "master"
+		err = c.QueryRowContext(ctx, cmd,
+			func(r *sql.Row) error {
+				return r.Scan(&user.LoginName)
+			},
+			sql.Named("sid", sid),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if roles == "" {
 		user.Roles = make([]string, 0)
 	} else {
@@ -88,12 +101,12 @@ func (c *Connector) CreateUser(ctx context.Context, database string, user *model
 			DECLARE @language nvarchar(max) = @defaultLanguage
 			IF @language = '' SET @language = NULL
 			IF @typeStr = '' SET @typeStr = 'E'
-			IF @authType = 'INSTANCE'
+			IF @loginName != '' AND @username != '' AND @password = ''
 				BEGIN
 					SET @stmt = 'CREATE USER ' + QuoteName(@username) + ' FOR LOGIN ' + QuoteName(@loginName) + ' ' +
 								'WITH DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema)
 				END
-			IF @authType = 'DATABASE'
+			IF @loginName = '' AND @username != '' AND  @password != ''
 				BEGIN
 					SET @stmt = 'CREATE USER ' + QuoteName(@username) + ' WITH PASSWORD = ' + QuoteName(@password, '''') + ', ' +
 								'DEFAULT_SCHEMA = ' + QuoteName(@defaultSchema)
@@ -102,7 +115,7 @@ func (c *Connector) CreateUser(ctx context.Context, database string, user *model
 							SET @stmt = @stmt + ', DEFAULT_LANGUAGE = ' + Coalesce(QuoteName(@language), 'NONE')
 						END
 				END
-			IF @authType = 'EXTERNAL'
+			IF @loginName = '' AND @username != '' AND @password = ''
 				BEGIN
 					IF @@VERSION LIKE 'Microsoft SQL Azure%'
 						BEGIN
@@ -168,13 +181,6 @@ func (c *Connector) CreateUser(ctx context.Context, database string, user *model
 									'CLOSE role_cur;' +
 									'DEALLOCATE role_cur;'
 			EXEC (@stmt)`
-	if user.AuthType != "EXTERNAL" {
-		// External users do not have a server login
-		_, err := c.GetLogin(ctx, user.LoginName)
-		if err != nil {
-			return err
-		}
-	}
 	return c.
 		setDatabase(&database).
 		ExecContext(ctx, cmd,
