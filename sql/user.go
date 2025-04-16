@@ -75,7 +75,7 @@ func (c *Connector) GetUser(ctx context.Context, database, username string) (*mo
 			return nil, err
 		}
 	}
-	if user.AuthType == "EXTERNAL" && strings.Contains(user.SIDStr, "AADE") {
+	if user.AuthType == "EXTERNAL" && strings.HasSuffix(user.SIDStr, "AADE") {
 		cmd = "SELECT name FROM [sys].[server_principals] WHERE type NOT IN ('G', 'R') AND CONVERT(varchar(64), sid, 1) = LEFT(CONVERT(varchar(64), @sid, 1), 34)"
 		c.Database = "master"
 		err = c.QueryRowContext(ctx, cmd,
