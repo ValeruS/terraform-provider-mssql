@@ -7,11 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Added
+
+- New resource `mssql_entraid_login` for managing Entra ID (formerly Azure AD) logins
+- New data source `mssql_entraid_login` for retrieving Entra ID login information
+
+### Changed
+
+- Optimized resource creation and update operations
+
 ## [0.3.9]
+
+### Changed
+
+- Upgraded to go version 1.23
+- Upgraded dependencies
 
 ### Fixed
 
-- update go and minor fixes
+- Minor fixes in acceptance tests
 
 ## [0.3.8]
 

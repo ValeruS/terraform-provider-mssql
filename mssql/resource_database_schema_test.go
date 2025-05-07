@@ -250,6 +250,9 @@ func testAccCheckSchema(t *testing.T, name string, login string, data map[string
 					{{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
 					{{ with .default_language }}default_language = "{{ . }}"{{ end }}
 					{{ with .roles }}roles = {{ . }}{{ end }}
+					{{ if .login_name }}
+					depends_on = [mssql_login.{{ .name }}]
+					{{ end }}
 				}
 			{{ end }}
 			resource "mssql_database_schema" "{{ .name }}" {
@@ -261,7 +264,7 @@ func testAccCheckSchema(t *testing.T, name string, login string, data map[string
 				schema_name = "{{ .schema_name }}"
 				{{ with .owner_name }}owner_name = "{{ . }}"{{ end }}
 				{{ if .username }}
-					depends_on = [mssql_user.{{ .name }}]
+				depends_on = [mssql_user.{{ .name }}]
 				{{ end }}
 			}`
 

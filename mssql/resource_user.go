@@ -133,15 +133,6 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
 	roles := data.Get(rolesProp).(*schema.Set).List()
 
-	var authType string
-	if loginName != "" {
-		authType = "INSTANCE"
-	} else if password != "" {
-		authType = "DATABASE"
-	} else {
-		authType = "EXTERNAL"
-	}
-
 	connector, err := getUserConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
@@ -152,7 +143,6 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 		ObjectId:        objectId,
 		LoginName:       loginName,
 		Password:        password,
-		AuthType:        authType,
 		TypeStr:         typeStr,
 		DefaultSchema:   defaultSchema,
 		DefaultLanguage: defaultLanguage,
