@@ -201,6 +201,17 @@ func resourceDatabasePermissionUpdate(ctx context.Context, data *schema.Resource
 	username := data.Get(usernameProp).(string)
 	permissions := data.Get(permissionsProp).(*schema.Set).List()
 
+	// Store old values for all properties that might change
+	oldValues := make(map[string]interface{})
+	for _, prop := range []string{permissionsProp} {
+		if data.HasChange(prop) {
+			oldValue, _ := data.GetChange(prop)
+			if oldSet, ok := oldValue.(*schema.Set); ok {
+				oldValues[prop] = oldSet.List()
+			}
+		}
+	}
+
 	connector, err := getDatabasePermissionsConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
@@ -211,7 +222,14 @@ func resourceDatabasePermissionUpdate(ctx context.Context, data *schema.Resource
 		UserName: username,
 		Permissions: toStringSlice(permissions),
 	}
+
 	if err = connector.UpdateDatabasePermissions(ctx, dbPermissionModel); err != nil {
+		// If update fails, revert all changed values in the state
+		for prop, oldValue := range oldValues {
+			if err := data.Set(prop, oldValue); err != nil {
+				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+			}
+		}
 		return diag.FromErr(errors.Wrapf(err, "unable to update permissions for user [%s] on database [%s]", username, database))
 	}
 
