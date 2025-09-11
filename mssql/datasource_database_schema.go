@@ -70,8 +70,7 @@ func dataSourceDatabaseSchemaRead(ctx context.Context, data *schema.ResourceData
 	}
 
 	if sqlschema == nil {
-		logger.Info().Msgf("schema [%s].[%s] does not exist", database, schemaName)
-		data.SetId("")
+		return diag.Errorf("The schema [%s] in database [%s] does not exist", schemaName, database)
 	} else {
 		if err = data.Set(schemaIdProp, sqlschema.SchemaID); err != nil {
 			return diag.FromErr(err)

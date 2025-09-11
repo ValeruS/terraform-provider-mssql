@@ -69,8 +69,7 @@ func datasourceDatabaseCredentialRead(ctx context.Context, data *schema.Resource
 		return diag.FromErr(errors.Wrapf(err, "unable to read database scoped credential [%s] on database [%s]", credentialname, database))
 	}
 	if scopedcredential == nil {
-		logger.Info().Msgf("No database scoped credential [%s] found on database [%s]", credentialname, database)
-		data.SetId("")
+		return diag.Errorf("No database scoped credential [%s] found on database [%s]", credentialname, database)
 	} else {
 		if err = data.Set(credentialNameProp, scopedcredential.CredentialName); err != nil {
 			return diag.FromErr(err)

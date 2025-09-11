@@ -90,8 +90,7 @@ func datasourceAzureExternalDatasourceRead(ctx context.Context, data *schema.Res
 		return diag.FromErr(errors.Wrapf(err, "unable to read external data source [%s] on database [%s]", datasourcename, database))
 	}
 	if datasource == nil {
-		logger.Info().Msgf("No external data source [%s] found on database [%s]", datasourcename, database)
-		data.SetId("")
+		return diag.Errorf("No external data source [%s] found on database [%s]", datasourcename, database)
 	} else {
 		if err = data.Set(datasourcenameProp, datasource.DataSourceName); err != nil {
 			return diag.FromErr(err)

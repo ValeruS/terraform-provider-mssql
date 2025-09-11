@@ -68,8 +68,7 @@ func dataSourceDatabasePermissionsRead(ctx context.Context, data *schema.Resourc
 		return diag.FromErr(errors.Wrapf(err, "unable to read permissions for user [%s] on database [%s]", username, database))
 	}
 	if permissions == nil {
-		logger.Info().Msgf("No permissions found for user [%s] on database [%s]", username, database)
-		data.SetId("")
+		return diag.Errorf("No permissions found for user [%s] on database [%s]", username, database)
 	} else {
 		if err = data.Set(databaseProp, permissions.DatabaseName); err != nil {
 			return diag.FromErr(err)
