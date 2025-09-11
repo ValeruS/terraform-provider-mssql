@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1]
+
+### Fixed
+
+- Improved clarity and consistency of error messages in various datasource modules to provide better context and information.
+
 ## [0.4.0]
 
 ### Added
