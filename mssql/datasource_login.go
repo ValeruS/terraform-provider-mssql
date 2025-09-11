@@ -64,8 +64,7 @@ func dataSourceLoginRead(ctx context.Context, data *schema.ResourceData, meta in
 		return diag.FromErr(errors.Wrapf(err, "unable to read login [%s]", loginName))
 	}
 	if login == nil {
-		logger.Info().Msgf("No login found for [%s]", loginName)
-		data.SetId("")
+		return diag.Errorf("No login found for [%s]", loginName)
 	} else {
 		if err = data.Set(principalIdProp, login.PrincipalID); err != nil {
 			return diag.FromErr(err)

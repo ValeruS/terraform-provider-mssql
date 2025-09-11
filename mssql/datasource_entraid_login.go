@@ -64,8 +64,7 @@ func dataSourceEntraIDLoginRead(ctx context.Context, data *schema.ResourceData, 
 		return diag.FromErr(errors.Wrapf(err, "unable to EntraID login [%s]", loginName))
 	}
 	if EntraIDLogin == nil {
-		logger.Info().Msgf("No EntraID Login found for [%s]", loginName)
-		data.SetId("")
+		return diag.Errorf("No EntraID Login found for [%s]", loginName)
 	} else {
 		if err = data.Set(principalIdProp, EntraIDLogin.PrincipalID); err != nil {
 			return diag.FromErr(err)

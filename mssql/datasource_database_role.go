@@ -70,8 +70,7 @@ func dataSourceDatabaseRoleRead(ctx context.Context, data *schema.ResourceData, 
 	}
 
 	if role == nil {
-		logger.Info().Msgf("role [%s].[%s] does not exist", database, roleName)
-		data.SetId("")
+		return diag.Errorf("The role [%s] in database [%s] does not exist", roleName, database)
 	} else {
 		if err = data.Set(principalIdProp, role.RoleID); err != nil {
 			return diag.FromErr(err)

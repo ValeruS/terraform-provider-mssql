@@ -90,8 +90,7 @@ func dataSourceUserRead(ctx context.Context, data *schema.ResourceData, meta int
 		return diag.FromErr(errors.Wrapf(err, "unable to read user [%s].[%s]", database, username))
 	}
 	if user == nil {
-		logger.Info().Msgf("No user found for [%s].[%s]", database, username)
-		data.SetId("")
+		return diag.Errorf("No user found for [%s].[%s]", database, username)
 	} else {
 		if err = data.Set(loginNameProp, user.LoginName); err != nil {
 			return diag.FromErr(err)
