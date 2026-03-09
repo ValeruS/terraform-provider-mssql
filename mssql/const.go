@@ -12,6 +12,7 @@ const (
 	authenticationTypeProp   = "authentication_type"
 	defaultSchemaProp        = "default_schema"
 	defaultDboPropDefault    = "dbo"
+	defaultSAPropDefault     = "sa"
 	rolesProp                = "roles"
 	loginNameProp            = "login_name"
 	permissionsProp          = "permissions"

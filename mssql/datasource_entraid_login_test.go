@@ -1,108 +1,85 @@
 package mssql
 
 import (
-	"context"
+	"fmt"
+	"os"
 	"testing"
 
-	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-func TestAccDataEntraIDLogin_Mock(t *testing.T) {
-	// Create mock connector with test data
-	mockConnector := &MockEntraIDLoginConnector{
-		login: &model.EntraIDLogin{
-			LoginName:       "test_entraid_login",
-			ObjectId:        "test-object-id",
-			PrincipalID:     1001,
-			Sid:            "test-sid",
-			DefaultDatabase: "master",
-			DefaultLanguage: "us_english",
-		},
-	}
-
-	// Create test provider with mock connector
-	testProvider := &schema.Provider{
-		ResourcesMap: map[string]*schema.Resource{
-			"mssql_entraid_login": resourceEntraIDLogin(),
-		},
-		DataSourcesMap: map[string]*schema.Resource{
-			"mssql_entraid_login": dataSourceEntraIDLogin(),
-		},
-		ConfigureContextFunc: func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-			return mockConnector, nil
-		},
-	}
-
+func TestAccDataEntraIDLogin_Azure_Basic(t *testing.T) {
+	clientUser := os.Getenv("TF_ACC_AZURE_USER_CLIENT_USER")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IsUnitTest:        runLocalAccTests,
-		ProviderFactories: map[string]func() (*schema.Provider, error){
-			"mssql": func() (*schema.Provider, error) {
-				return testProvider, nil
-			},
-		},
-		CheckDestroy: func(state *terraform.State) error {
-			return testAccCheckEntraIDLoginDestroyMock(state, mockConnector)
-		},
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccDataEntraIDLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataEntraIDLogin(t, "basic", map[string]interface{}{
-					"login_name": "test_entraid_login",
-				}),
+				Config: testAccCheckDataEntraIDLogin(t, "basic", "azure", map[string]interface{}{"login_name": clientUser}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "id", "sqlserver://localhost:1433/login/test_entraid_login"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "login_name", "test_entraid_login"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "server.#", "1"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "server.0.host", "localhost"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "server.0.port", "1433"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "server.0.login.#", "1"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "server.0.login.0.username", "test_user"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "server.0.login.0.password", "test_password"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "server.0.azure_login.#", "0"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "principal_id", "1001"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "sid", "test-sid"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "default_database", "master"),
-					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "default_language", "us_english"),
+					resource.TestCheckResourceAttr("data.mssql_entraid_login.basic", "login_name", clientUser),
+					resource.TestCheckResourceAttrSet("data.mssql_entraid_login.basic", "principal_id"),
 				),
 			},
 		},
 	})
 }
 
-func testAccDataEntraIDLogin(t *testing.T, name string, data map[string]interface{}) string {
+func testAccCheckDataEntraIDLogin(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `resource "mssql_entraid_login" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
-					login {
-						username = "{{ .username }}"
-						password = "{{ .password }}"
-					}
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				login_name = "{{ .login_name }}"
-				object_id = "test-object-id"
+				{{ with .object_id }}object_id = "{{ . }}"{{ end }}
 			}
 			data "mssql_entraid_login" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
-					login {
-						username = "{{ .username }}"
-						password = "{{ .password }}"
-					}
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
-				login_name = "{{ .login_name }}"
-				depends_on = [mssql_entraid_login.{{ .name }}]
+				login_name = mssql_entraid_login.{{ $.name }}.login_name
+				depends_on = [mssql_entraid_login.{{ $.name }}]
 			}`
+
 	data["name"] = name
-	data["host"] = "localhost"
-	data["username"] = "test_user"
-	data["password"] = "test_password"
+	data["login"] = login
+	if login == "fedauth" || login == "msi" || login == "azure" {
+		data["host"] = os.Getenv("TF_ACC_SQL_SERVER")
+	} else if login == "login" {
+		data["host"] = "localhost"
+	} else {
+		t.Fatalf("login expected to be one of 'login', 'azure', 'msi', 'fedauth', got %s", login)
+	}
 	res, err := templateToString(name, text, data)
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
 	return res
+}
+
+func testAccDataEntraIDLoginDestroy(state *terraform.State) error {
+	for _, rs := range state.RootModule().Resources {
+		if rs.Type != "mssql_entraid_login" {
+			continue
+		}
+
+		connector, err := getTestConnector(rs.Primary.Attributes)
+		if err != nil {
+			return err
+		}
+
+		loginName := rs.Primary.Attributes["login_name"]
+		login, err := connector.GetEntraIDLogin(loginName)
+		if login != nil {
+			return fmt.Errorf("login still exists")
+		}
+		if err != nil {
+			return fmt.Errorf("expected no error, got %s", err)
+		}
+	}
+	return nil
 }

@@ -1,7 +1,7 @@
 package model
 
-// DatabaseRole represents a SQL Server database role
-type DatabaseRole struct {
+// ServerRole represents a SQL Server role
+type ServerRole struct {
 	RoleID    int
 	RoleName  string
 	OwnerName string

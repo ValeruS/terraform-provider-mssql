@@ -191,9 +191,6 @@ func resourceEntraIDLoginImport(ctx context.Context, data *schema.ResourceData, 
 		return nil, errors.Errorf("no EntraID Login [%s] found for import", loginName)
 	}
 
-	if err = data.Set(objectIdProp, EntraIDLogin.ObjectId); err != nil {
-		return nil, err
-	}
 	if err = data.Set(defaultDatabaseProp, EntraIDLogin.DefaultDatabase); err != nil {
 		return nil, err
 	}

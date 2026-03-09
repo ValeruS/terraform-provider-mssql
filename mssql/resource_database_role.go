@@ -69,7 +69,8 @@ func resourceDatabaseRole() *schema.Resource {
 type DatabaseRoleConnector interface {
 	CreateDatabaseRole(ctx context.Context, database string, roleName string, ownerName string) error
 	GetDatabaseRole(ctx context.Context, database, roleName string) (*model.DatabaseRole, error)
-	UpdateDatabaseRole(ctx context.Context, database string, roleId int, roleName string, ownerName string) error
+	UpdateDatabaseRoleName(ctx context.Context, database string, newroleName string, oldroleName string) error
+	UpdateDatabaseRoleOwner(ctx context.Context, database string, roleName string, ownerName string) error
 	DeleteDatabaseRole(ctx context.Context, database, roleName string) error
 	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
@@ -177,7 +178,6 @@ func resourceDatabaseRoleUpdate(ctx context.Context, data *schema.ResourceData, 
 	logger.Debug().Msgf("Update %s", data.Id())
 
 	database := data.Get(databaseProp).(string)
-	roleId := data.Get(principalIdProp).(int)
 	roleName := data.Get(roleNameProp).(string)
 	ownerName := data.Get(ownerNameProp).(string)
 
@@ -195,14 +195,24 @@ func resourceDatabaseRoleUpdate(ctx context.Context, data *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	if err = connector.UpdateDatabaseRole(ctx, database, roleId, roleName, ownerName); err != nil {
-		// If update fails, revert all changed values in the state
-		for prop, oldValue := range oldValues {
-			if err := data.Set(prop, oldValue); err != nil {
-				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+	if data.HasChange(roleNameProp) {
+		oldRoleName := oldValues[roleNameProp].(string)
+		if err = connector.UpdateDatabaseRoleName(ctx, database, roleName, oldRoleName); err != nil {
+			if setErr := data.Set(roleNameProp, oldRoleName); setErr != nil {
+				logger.Error().Err(setErr).Msg("Failed to revert roleName state after update error")
 			}
+			return diag.FromErr(errors.Wrapf(err, "unable to update role name [%s].[%s]", database, roleName))
 		}
-		return diag.FromErr(errors.Wrapf(err, "unable to update role [%s].[%s]", database, roleName))
+	}
+
+	if data.HasChange(ownerNameProp) {
+		oldOwnerName := oldValues[ownerNameProp].(string)
+		if err = connector.UpdateDatabaseRoleOwner(ctx, database, roleName, ownerName); err != nil {
+			if setErr := data.Set(ownerNameProp, oldOwnerName); setErr != nil {
+				logger.Error().Err(setErr).Msg("Failed to revert ownerName state after update error")
+			}
+			return diag.FromErr(errors.Wrapf(err, "unable to update role owner [%s].[%s]", database, roleName))
+		}
 	}
 
 	data.SetId(getDatabaseRoleID(data))
@@ -238,20 +248,20 @@ func resourceDatabaseRoleImport(ctx context.Context, data *schema.ResourceData, 
 	data.SetId(getDatabaseRoleID(data))
 
 	database := data.Get(databaseProp).(string)
-	role_name := data.Get(roleNameProp).(string)
+	roleName := data.Get(roleNameProp).(string)
 
 	connector, err := getDatabaseRoleConnector(meta, data)
 	if err != nil {
 		return nil, err
 	}
 
-	role, err := connector.GetDatabaseRole(ctx, database, role_name)
+	role, err := connector.GetDatabaseRole(ctx, database, roleName)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get role [%s].[%s]", database, role_name)
+		return nil, errors.Wrapf(err, "unable to get role [%s].[%s]", database, roleName)
 	}
 
 	if role == nil {
-		return nil, errors.Errorf("role [%s].[%s] does not exist", database, role_name)
+		return nil, errors.Errorf("role [%s].[%s] does not exist", database, roleName)
 	}
 
 	if err = data.Set(principalIdProp, role.RoleID); err != nil {

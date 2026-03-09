@@ -492,30 +492,30 @@ func TestAccUser_Azure_Update_Roles(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡"}),
+				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$A"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_user.update", "roles.#", "0"),
 					testAccCheckUserExists("mssql_user.update", Check{"roles", "==", []string{}}),
-					testAccCheckDatabaseUserWorks("mssql_user.update", "user_update", "valueIsH8kd$¡"),
+					testAccCheckDatabaseUserWorks("mssql_user.update", "user_update", "valueIsH8kd$A"),
 				),
 			},
 			{
-				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\",\"db_datawriter\"]"}),
+				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$A", "roles": "[\"db_owner\",\"db_datawriter\"]"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_user.update", "roles.#", "2"),
 					resource.TestCheckResourceAttr("mssql_user.update", "roles.0", "db_datawriter"),
 					resource.TestCheckResourceAttr("mssql_user.update", "roles.1", "db_owner"),
 					testAccCheckUserExists("mssql_user.update", Check{"roles", "==", []string{"db_owner", "db_datawriter"}}),
-					testAccCheckDatabaseUserWorks("mssql_user.update", "user_update", "valueIsH8kd$¡"),
+					testAccCheckDatabaseUserWorks("mssql_user.update", "user_update", "valueIsH8kd$A"),
 				),
 			},
 			{
-				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
+				Config: testAccCheckUser(t, "update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update", "login_name": "user_update", "login_password": "valueIsH8kd$A", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_user.update", "roles.#", "1"),
 					resource.TestCheckResourceAttr("mssql_user.update", "roles.0", "db_owner"),
 					testAccCheckUserExists("mssql_user.update", Check{"roles", "==", []string{"db_owner"}}),
-					testAccCheckDatabaseUserWorks("mssql_user.update", "user_update", "valueIsH8kd$¡"),
+					testAccCheckDatabaseUserWorks("mssql_user.update", "user_update", "valueIsH8kd$A"),
 				),
 			},
 		},
@@ -569,30 +569,33 @@ func testAccCheckUser(t *testing.T, name string, login string, data map[string]i
 
 func testAccCheckMultipleUsers(t *testing.T, name string, login string, data map[string]interface{}, count int) string {
 	text := `{{ if .login_name }}
-					 resource "mssql_login" "{{ .name }}" {
-						 count = {{ .count }}
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 login_name = "{{ .login_name }}-${count.index}"
-						 password   = "{{ .login_password }}"
-					 }
-					 {{ end }}
-					 resource "mssql_user" "{{ .name }}" {
-						 count = {{ .count }}
-						 server {
-							 host = "{{ .host }}"
-							 {{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-						 }
-						 {{ with .database }}database = "{{ . }}"{{ end }}
-						 username = "{{ .username }}-${count.index}"
-						 {{ with .password }}password = "{{ . }}"{{ end }}
-						 {{ with .login_name }}login_name = "{{ . }}-${count.index}"{{ end }}
-						 {{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
-						 {{ with .default_language }}default_language = "{{ . }}"{{ end }}
-						 {{ with .roles }}roles = {{ . }}{{ end }}
-					 }`
+			resource "mssql_login" "{{ .name }}" {
+				count = {{ .count }}
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				login_name = "{{ .login_name }}-${count.index}"
+				password   = "{{ .login_password }}"
+			}
+			{{ end }}
+			resource "mssql_user" "{{ .name }}" {
+				count = {{ .count }}
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				{{ with .database }}database = "{{ . }}"{{ end }}
+				username = "{{ .username }}-${count.index}"
+				{{ with .password }}password = "{{ . }}"{{ end }}
+				{{ with .login_name }}login_name = "{{ . }}-${count.index}"{{ end }}
+				{{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
+				{{ with .default_language }}default_language = "{{ . }}"{{ end }}
+				{{ with .roles }}roles = {{ . }}{{ end }}
+				{{ if .login_name }}
+				depends_on = [mssql_login.{{ .name }}]
+				{{ end }}
+			}`
 	data["name"] = name
 	data["login"] = login
 	data["count"] = count

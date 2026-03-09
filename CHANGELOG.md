@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0]
+
+### Added
+
+- New resource `mssql_server_role` for creating and managing server-level roles in SQL Server
+- New data source `mssql_server_role` for retrieving server role information
+
+### Changed
+
+- Improved `database_role` update logic and error handling on update
+- Improved `mssql_entraid_login` resource and datasource acceptance tests
+- Updated dependencies
+
+### Fixed
+
+- Fixed import for `mssql_entraid_login`
+
 ## [0.4.1]
 
 ### Fixed
