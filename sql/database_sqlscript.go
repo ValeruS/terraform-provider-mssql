@@ -28,7 +28,7 @@ func (c *Connector) DataBaseExecuteScript(ctx context.Context, database string, 
 
 	// Split the script into batches
 	batches := splitBatches(script)
-	
+
 	// Execute each batch
 	for _, batch := range batches {
 		// Prepare the dynamic SQL execution command for this batch
@@ -55,14 +55,14 @@ func (c *Connector) DataBaseExecuteScript(ctx context.Context, database string, 
 func splitBatches(script string) []string {
 	// First normalize line endings
 	script = strings.ReplaceAll(script, "\r\n", "\n")
-	
+
 	var batches []string
 	lines := strings.Split(script, "\n")
 	currentBatch := []string{}
-	
+
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
-		
+
 		// Check if the line is a GO statement (case insensitive, allowing for GO n syntax)
 		if goMatch := strings.HasPrefix(strings.ToUpper(trimmedLine), "GO"); goMatch {
 			// If we have statements in the current batch, add them
@@ -73,15 +73,15 @@ func splitBatches(script string) []string {
 			currentBatch = []string{}
 			continue
 		}
-		
+
 		currentBatch = append(currentBatch, line)
 	}
-	
+
 	// Add the last batch if it's not empty
 	if batchContent := strings.TrimSpace(strings.Join(currentBatch, "\n")); batchContent != "" {
 		batches = append(batches, batchContent)
 	}
-	
+
 	return batches
 }
 

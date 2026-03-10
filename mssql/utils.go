@@ -81,6 +81,13 @@ func getDatabaseSQLScriptID(data *schema.ResourceData) string {
 	return fmt.Sprintf("sqlserver://%s:%s/%s/sqlscript/%s", host, port, database, encodedID)
 }
 
+func getServerRoleID(data *schema.ResourceData) string {
+	host := data.Get(serverProp + ".0.host").(string)
+	port := data.Get(serverProp + ".0.port").(string)
+	roleName := data.Get(roleNameProp).(string)
+	return fmt.Sprintf("sqlserver://%s:%s/role/%s", host, port, roleName)
+}
+
 func loggerFromMeta(meta interface{}, resource, function string) zerolog.Logger {
 	return meta.(model.Provider).ResourceLogger(resource, function)
 }

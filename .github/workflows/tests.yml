@@ -7,12 +7,46 @@ on:
     branches: [ "master" ]
 
 jobs:
-  test:
-
+  lint:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+      - name: Run go fmt
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Go files are not formatted. Run 'go fmt ./...'"
+            gofmt -l .
+            exit 1
+          fi
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-package: ./...
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint, security]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+        cache: false
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
@@ -26,5 +60,6 @@ jobs:
     - name: Run acceptance tests
       run: |
         make docker-start
-        sh -c 'TESTARGS=-count=1 ./wait-for localhost:1433 -- make testacc-local'
+        sleep 30
+        make testacc-local
         make docker-stop

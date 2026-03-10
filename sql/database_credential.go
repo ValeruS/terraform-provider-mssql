@@ -12,12 +12,12 @@ func (c *Connector) GetDatabaseCredential(ctx context.Context, database, credent
 	err := c.
 		setDatabase(&database).
 		QueryRowContext(ctx,
-		"SELECT name, principal_id, credential_id, credential_identity FROM [sys].[database_scoped_credentials] WHERE [name] = @credentialname",
-		func(r *sql.Row) error {
-			return r.Scan(&scopedcredential.CredentialName, &scopedcredential.PrincipalID, &scopedcredential.CredentialID, &scopedcredential.IdentityName)
-		},
-		sql.Named("credentialname", credentialname),
-	)
+			"SELECT name, principal_id, credential_id, credential_identity FROM [sys].[database_scoped_credentials] WHERE [name] = @credentialname",
+			func(r *sql.Row) error {
+				return r.Scan(&scopedcredential.CredentialName, &scopedcredential.PrincipalID, &scopedcredential.CredentialID, &scopedcredential.IdentityName)
+			},
+			sql.Named("credentialname", credentialname),
+		)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

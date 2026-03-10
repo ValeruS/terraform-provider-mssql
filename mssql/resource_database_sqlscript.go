@@ -277,15 +277,15 @@ func validateVerifyObject(verifyObject string) error {
 
 	objectType := strings.ToUpper(parts[0])
 	validTypes := map[string]bool{
-		"TABLE":      true,
-		"VIEW":       true,
-		"PROCEDURE":  true,
-		"PROC":       true,
-		"FUNCTION":   true,
-		"FUNC":       true,
-		"SCHEMA":     true,
-		"TRIGGER":    true,
-		"TRG":        true,
+		"TABLE":     true,
+		"VIEW":      true,
+		"PROCEDURE": true,
+		"PROC":      true,
+		"FUNCTION":  true,
+		"FUNC":      true,
+		"SCHEMA":    true,
+		"TRIGGER":   true,
+		"TRG":       true,
 	}
 
 	if !validTypes[objectType] {

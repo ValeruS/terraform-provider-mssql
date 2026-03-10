@@ -94,6 +94,9 @@ func testAccDataUser(t *testing.T, name string, login string, data map[string]in
 				{{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
 				{{ with .default_language }}default_language = "{{ . }}"{{ end }}
 				{{ with .roles }}roles = {{ . }}{{ end }}
+				{{ if .login_name }}
+				depends_on = [mssql_login.{{ .name }}]
+				{{ end }}
 			}
 			data "mssql_user" "{{ .name }}" {
 				server {

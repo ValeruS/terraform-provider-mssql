@@ -9,7 +9,7 @@ func SQLIdentifier(i interface{}, k string) (warnings []string, errors []error) 
 	v := i.(string)
 	if (!regexp.MustCompile(`^[a-zA-Z0-9_.@#-]+$`).MatchString(v)) && (!regexp.MustCompile("SHARED ACCESS SIGNATURE").MatchString(v)) {
 		errors = append(errors, fmt.Errorf(
-			"invalid SQL identifier. SQL identifier allows letters, digits, @, $, #, . or _, start with letter, _, @ or # .Got %q", v))
+			"invalid SQL identifier. SQL identifier allows letters, digits, @, $, #, -, . or _, start with letter, _, @ or # .Got %q", v))
 	}
 
 	if 1 > len(v) {

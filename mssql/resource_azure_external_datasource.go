@@ -75,7 +75,7 @@ func resourceAzureExternalDatasource() *schema.Resource {
 		CustomizeDiff: func(ctx context.Context, data *schema.ResourceDiff, m interface{}) error {
 			typeStr := data.Get(typeStrProp).(string)
 			rdatabasename := data.Get(rdatabasenameProp).(string)
-			
+
 			if typeStr == "RDBMS" && rdatabasename == "" {
 				return fmt.Errorf("%q is required when type is RDBMS", rdatabasenameProp)
 			}

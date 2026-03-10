@@ -294,9 +294,9 @@ func (c *Connector) setDatabase(database *string) *Connector {
 
 func (c *Connector) GetMSSQLVersion(ctx context.Context) (string, error) {
 	var version string
-	err := c.QueryRowContext(ctx,"SELECT @@VERSION", func(r *sql.Row) error {
+	err := c.QueryRowContext(ctx, "SELECT @@VERSION", func(r *sql.Row) error {
 		return r.Scan(&version)
-	},)
+	})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", nil
@@ -320,6 +320,6 @@ func (c *Connector) DatabaseExists(ctx context.Context, database string) (bool, 
 	if err != nil {
 		return false, errors.Wrapf(err, "error checking if database [%s] exists", database)
 	}
-	
+
 	return count > 0, nil
 }

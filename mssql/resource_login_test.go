@@ -48,7 +48,7 @@ func TestAccLogin_Local_Basic_Pass_Validate_Length(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "basic_pass_validate", "login", map[string]interface{}{"login_name": "login_basic_pass_length", "password": "shotpas"}),
+				Config:      testAccCheckLogin(t, "basic_pass_validate", "login", map[string]interface{}{"login_name": "login_basic_pass_length", "password": "shotpas"}),
 				ExpectError: regexp.MustCompile("length should equal to or greater than 8"),
 			},
 		},
