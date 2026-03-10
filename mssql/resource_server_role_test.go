@@ -149,7 +149,7 @@ func TestAccServerRole_Azure_Basic_Create(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckServerRoleDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckServerRole(t, "azure_test_create", "azure", map[string]interface{}{"role_name": "test_role_create"}),
+				Config:      testAccCheckServerRole(t, "azure_test_create", "azure", map[string]interface{}{"role_name": "test_role_create"}),
 				ExpectError: regexp.MustCompile("Statement 'CREATE SERVER ROLE' is not supported in this version of SQL Server"),
 			},
 		},

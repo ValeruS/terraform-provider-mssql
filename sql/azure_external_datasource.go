@@ -13,12 +13,12 @@ func (c *Connector) GetAzureExternalDatasource(ctx context.Context, database, da
 	err := c.
 		setDatabase(&database).
 		QueryRowContext(ctx,
-		"SELECT eds.name, eds.data_source_id, eds.location, eds.type_desc, dsc.name, eds.credential_id, eds.database_name FROM [sys].[external_data_sources] eds INNER JOIN [sys].[database_scoped_credentials] dsc ON dsc.credential_id = eds.credential_id AND eds.name = @datasourcename",
-		func(r *sql.Row) error {
-			return r.Scan(&extds.DataSourceName, &extds.DataSourceId, &extds.Location, &extds.TypeStr, &extds.CredentialName, &extds.CredentialId, &rdbname)
-		},
-		sql.Named("datasourcename", datasourcename),
-	)
+			"SELECT eds.name, eds.data_source_id, eds.location, eds.type_desc, dsc.name, eds.credential_id, eds.database_name FROM [sys].[external_data_sources] eds INNER JOIN [sys].[database_scoped_credentials] dsc ON dsc.credential_id = eds.credential_id AND eds.name = @datasourcename",
+			func(r *sql.Row) error {
+				return r.Scan(&extds.DataSourceName, &extds.DataSourceId, &extds.Location, &extds.TypeStr, &extds.CredentialName, &extds.CredentialId, &rdbname)
+			},
+			sql.Named("datasourcename", datasourcename),
+		)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

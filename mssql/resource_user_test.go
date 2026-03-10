@@ -139,7 +139,7 @@ func TestAccUser_Azure_Database_Update_Password(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckUser(t, "azure_update", "azure", map[string]interface{}{"database": "testdb","username": "test_update_password", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
+				Config: testAccCheckUser(t, "azure_update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update_password", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckUserExists("mssql_user.azure_update"),
 					testAccCheckDatabaseUserWorks("mssql_user.azure_update", "test_update_password", "valueIsH8kd$¡"),
@@ -161,7 +161,7 @@ func TestAccUser_Azure_Database_Update_Password(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccCheckUser(t, "azure_update", "azure", map[string]interface{}{"database": "testdb","username": "test_update_password", "password": "valueIsH8kd$¡AAA", "roles": "[\"db_owner\"]"}),
+				Config: testAccCheckUser(t, "azure_update", "azure", map[string]interface{}{"database": "testdb", "username": "test_update_password", "password": "valueIsH8kd$¡AAA", "roles": "[\"db_owner\"]"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckUserExists("mssql_user.azure_update"),
 					testAccCheckDatabaseUserWorks("mssql_user.azure_update", "test_update_password", "valueIsH8kd$¡AAA"),
@@ -193,7 +193,7 @@ func TestAccUser_Azure_Database_Pass_Validate(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckUser(t, "database_pass_validate", "azure", map[string]interface{}{"database": "testdb", "username": "database_user", "password": "weakpass"}),
+				Config:      testAccCheckUser(t, "database_pass_validate", "azure", map[string]interface{}{"database": "testdb", "username": "database_user", "password": "weakpass"}),
 				ExpectError: regexp.MustCompile("must contain characters from three of the categories - uppercase letters, lowercase letters, numbers and non-alphanumeric characters"),
 			},
 		},

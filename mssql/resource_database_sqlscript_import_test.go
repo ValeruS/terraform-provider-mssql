@@ -24,11 +24,11 @@ func TestAccDatabaseSQLScript_Local_BasicImport(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "mssql_database_sqlscript.test_import",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "mssql_database_sqlscript.test_import",
+				ImportState:             true,
+				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"sqlscript"},
-				ImportStateIdFunc: testAccImportStateId("mssql_database_sqlscript.test_import", false),
+				ImportStateIdFunc:       testAccImportStateId("mssql_database_sqlscript.test_import", false),
 			},
 		},
 	})
@@ -48,12 +48,12 @@ func TestAccDatabaseSQLScript_Local_InvalidObjectTypeImport(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "mssql_database_sqlscript.test_import_invalid",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "mssql_database_sqlscript.test_import_invalid",
+				ImportState:             true,
+				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"sqlscript"},
-				ImportStateId:     "mssql://localhost:1433/master/sqlscript/" + base64.StdEncoding.EncodeToString([]byte("master:TABBLE TestTable")),
-				ExpectError:       regexp.MustCompile(`unsupported object type: TABBLE`),
+				ImportStateId:           "mssql://localhost:1433/master/sqlscript/" + base64.StdEncoding.EncodeToString([]byte("master:TABBLE TestTable")),
+				ExpectError:             regexp.MustCompile(`unsupported object type: TABBLE`),
 			},
 		},
 	})

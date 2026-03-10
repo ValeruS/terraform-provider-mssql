@@ -87,8 +87,8 @@ func resourceDatabasePermissionsCreate(ctx context.Context, data *schema.Resourc
 
 	dbPermissionModel := &model.DatabasePermissions{
 		DatabaseName: database,
-		UserName: username,
-		Permissions: toStringSlice(permissions),
+		UserName:     username,
+		Permissions:  toStringSlice(permissions),
 	}
 	if err = connector.CreateDatabasePermissions(ctx, dbPermissionModel); err != nil {
 		return diag.FromErr(errors.Wrapf(err, "unable to create database permissions %v on database [%s] for user [%s]", string(permissions_), database, username))
@@ -173,8 +173,8 @@ func resourceDatabasePermissionDelete(ctx context.Context, data *schema.Resource
 
 	dbPermissionModel := &model.DatabasePermissions{
 		DatabaseName: database,
-		UserName: username,
-		Permissions: toStringSlice(permissions),
+		UserName:     username,
+		Permissions:  toStringSlice(permissions),
 	}
 	if err = connector.DeleteDatabasePermissions(ctx, dbPermissionModel); err != nil {
 		// If update fails, revert all changed values in the state
@@ -219,8 +219,8 @@ func resourceDatabasePermissionUpdate(ctx context.Context, data *schema.Resource
 
 	dbPermissionModel := &model.DatabasePermissions{
 		DatabaseName: database,
-		UserName: username,
-		Permissions: toStringSlice(permissions),
+		UserName:     username,
+		Permissions:  toStringSlice(permissions),
 	}
 
 	if err = connector.UpdateDatabasePermissions(ctx, dbPermissionModel); err != nil {

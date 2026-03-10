@@ -30,9 +30,9 @@ func resourceEntraIDLogin() *schema.Resource {
 				},
 			},
 			loginNameProp: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			objectIdProp: {

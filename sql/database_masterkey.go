@@ -12,11 +12,11 @@ func (c *Connector) GetDatabaseMasterkey(ctx context.Context, database string) (
 	err := c.
 		setDatabase(&database).
 		QueryRowContext(ctx,
-		"SELECT name, principal_id, symmetric_key_id, key_length, key_algorithm, algorithm_desc, CONVERT(VARCHAR(85), [key_guid], 1) FROM [sys].[symmetric_keys] WHERE name = '##MS_DatabaseMasterKey##'",
-		func(r *sql.Row) error {
-			return r.Scan(&masterkey.KeyName, &masterkey.PrincipalID, &masterkey.SymmetricKeyID, &masterkey.KeyLength, &masterkey.KeyAlgorithm, &masterkey.AlgorithmDesc, &masterkey.KeyGuid)
-		},
-	)
+			"SELECT name, principal_id, symmetric_key_id, key_length, key_algorithm, algorithm_desc, CONVERT(VARCHAR(85), [key_guid], 1) FROM [sys].[symmetric_keys] WHERE name = '##MS_DatabaseMasterKey##'",
+			func(r *sql.Row) error {
+				return r.Scan(&masterkey.KeyName, &masterkey.PrincipalID, &masterkey.SymmetricKeyID, &masterkey.KeyLength, &masterkey.KeyAlgorithm, &masterkey.AlgorithmDesc, &masterkey.KeyGuid)
+			},
+		)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -55,6 +55,5 @@ func (c *Connector) DeleteDatabaseMasterkey(ctx context.Context, database string
 			EXEC (@stmt)`
 	return c.
 		setDatabase(&database).
-		ExecContext(ctx, cmd,
-		)
+		ExecContext(ctx, cmd)
 }
