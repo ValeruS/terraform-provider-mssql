@@ -91,7 +91,7 @@ The `server` block supports the following arguments:
 * `port` - (Optional) The port of the SQL Server. Defaults to `1433`. Changing this forces a new resource to be created.
 * `login` - (Optional) SQL Server login for managing the database resources. The attributes supported in the `login` block is detailed below.
 * `azure_login` - (Optional) Azure AD login for managing the database resources. The attributes supported in the `azure_login` block is detailed below.
-* `azuread_default_chain_auth` - (Optional) Use a chain of strategies for authenticating when managing the database resources. This auth strategy is very similar to how the Azure CLI authenticates. For more information, see [DefaultAzureCredential](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication#configure-defaultazurecredential). This block has no attributes.
+* `azuread_default_chain_auth` - (Optional) Use a chain of strategies for authenticating when managing the database resources. This auth strategy is very similar to how the Azure CLI authenticates. For more information, see [DefaultAzureCredential](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication#configure-defaultazurecredential). The attributes supported in the `azuread_default_chain_auth` block are detailed below.
 * `azuread_managed_identity_auth` - (Optional) Use a managed identity for authenticating when managing the database resources. This is mainly useful for specifying a user-assigned managed identity. The attributes supported in the `azuread_managed_identity_auth` block is detailed below.
 
 The `login` block supports the following arguments:
@@ -104,6 +104,52 @@ The `azure_login` block supports the following arguments:
 * `tenant_id` - (Required) The tenant ID of the principal used to login to the SQL Server. Can also be sourced from the `MSSQL_TENANT_ID` environment variable.
 * `client_id` - (Required) The client ID of the principal used to login to the SQL Server. Can also be sourced from the `MSSQL_CLIENT_ID` environment variable.
 * `client_secret` - (Required) The client secret of the principal used to login to the SQL Server. Can also be sourced from the `MSSQL_CLIENT_SECRET` environment variable.
+
+The `azuread_default_chain_auth` block supports the following arguments:
+
+* `use_oidc` - (Optional) When `true`, authenticates using a federated/OIDC credential (workload identity federation) instead of the default credential chain. Credentials are read from the environment variables below. Defaults to `false`.
+
+When `use_oidc = true`, the following environment variables must be set:
+
+| Variable | Description |
+|---|---|
+| `ARM_TENANT_ID` | Tenant ID of the App Registration |
+| `ARM_CLIENT_ID` | Client ID of the App Registration |
+| `ARM_OIDC_TOKEN` | Signed JWT token (inline). Use this **or** `ARM_OIDC_TOKEN_FILE_PATH`. |
+| `ARM_OIDC_TOKEN_FILE_PATH` | Path to a file containing the signed JWT. The file is re-read on every token refresh. |
+
+#### Azure DevOps example with federated identity
+
+```hcl
+resource "mssql_user" "example" {
+  server {
+    host = "example.database.windows.net"
+    azuread_default_chain_auth {
+      use_oidc = true
+    }
+  }
+  database  = "dbName"
+  username  = "myuser@example.com"
+  object_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  roles     = ["db_datareader"]
+}
+```
+
+In the Azure DevOps pipeline, export the OIDC token before the Terraform tasks:
+
+```yaml
+- task: AzureCLI@2
+  displayName: 'Export OIDC token for MSSQL provider'
+  inputs:
+    azureSubscription: "${{ variables.serviceConnection }}"
+    addSpnToEnvironment: true
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      echo "##vso[task.setvariable variable=ARM_TENANT_ID]$tenantId"
+      echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$servicePrincipalId"
+      echo "##vso[task.setvariable variable=ARM_OIDC_TOKEN]$idToken"
+```
 
 The `azuread_managed_identity_auth` block supports the following arguments:
 

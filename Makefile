@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-VERSION	= 0.4.1
+VERSION	= 0.4.2
 
 TERRAFORM	  = terraform
 TERRAFORM_VERSION = "~> 1.5"

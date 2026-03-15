@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -53,6 +54,17 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 		}
 	}
 
+	if chainAuthList, ok := data.Get(prefix + "azuread_default_chain_auth").([]interface{}); ok && len(chainAuthList) > 0 && chainAuthList[0] != nil {
+		if useOidc, _ := chainAuthList[0].(map[string]interface{})["use_oidc"].(bool); useOidc {
+			connector.FedauthOIDC = &FedauthOIDC{
+				TenantID:          os.Getenv("ARM_TENANT_ID"),
+				ClientID:          os.Getenv("ARM_CLIENT_ID"),
+				OIDCToken:         os.Getenv("ARM_OIDC_TOKEN"),
+				OIDCTokenFilePath: os.Getenv("ARM_OIDC_TOKEN_FILE_PATH"),
+			}
+		}
+	}
+
 	if admin, ok := data.GetOk(prefix + "azuread_managed_identity_auth.0"); ok {
 		admin := admin.(map[string]interface{})
 		connector.FedauthMSI = &FedauthMSI{
@@ -64,14 +76,15 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 }
 
 type Connector struct {
-	Host       string `json:"host"`
-	Port       string `json:"port"`
-	Database   string `json:"database"`
-	Login      *LoginUser
-	AzureLogin *AzureLogin
-	FedauthMSI *FedauthMSI
-	Timeout    time.Duration `json:"timeout,omitempty"`
-	Token      string
+	Host         string `json:"host"`
+	Port         string `json:"port"`
+	Database     string `json:"database"`
+	Login        *LoginUser
+	AzureLogin   *AzureLogin
+	FedauthOIDC  *FedauthOIDC
+	FedauthMSI   *FedauthMSI
+	Timeout      time.Duration `json:"timeout,omitempty"`
+	Token        string
 }
 
 type LoginUser struct {
@@ -83,6 +96,13 @@ type AzureLogin struct {
 	TenantID     string `json:"tenant_id,omitempty"`
 	ClientID     string `json:"client_id,omitempty"`
 	ClientSecret string `json:"client_secret,omitempty"`
+}
+
+type FedauthOIDC struct {
+	TenantID          string `json:"tenant_id,omitempty"`
+	ClientID          string `json:"client_id,omitempty"`
+	OIDCToken         string `json:"oidc_token,omitempty"`
+	OIDCTokenFilePath string `json:"oidc_token_file_path,omitempty"`
 }
 
 type FedauthMSI struct {
@@ -188,6 +208,14 @@ func (c *Connector) connector() (driver.Connector, error) {
 		}
 		return mssql.NewAccessTokenConnector(connectionString, func() (string, error) { return c.tokenProvider() })
 	}
+	if c.FedauthOIDC != nil {
+		connectionString := (&url.URL{
+			Scheme:   "sqlserver",
+			Host:     host,
+			RawQuery: query.Encode(),
+		}).String()
+		return mssql.NewAccessTokenConnector(connectionString, func() (string, error) { return c.oidcTokenProvider() })
+	}
 	if c.FedauthMSI != nil {
 		query.Set("fedauth", "ActiveDirectoryManagedIdentity")
 		if c.FedauthMSI.UserID != "" {
@@ -233,6 +261,41 @@ func (c *Connector) tokenProvider() (string, error) {
 	}
 
 	c.Token = token.Token
+
+	return token.Token, nil
+}
+
+// oidcGetAssertion resolves the OIDC token from either the inline value or a file.
+func (c *Connector) oidcGetAssertion(ctx context.Context) (string, error) {
+	oidc := c.FedauthOIDC
+	if oidc.OIDCToken != "" {
+		return oidc.OIDCToken, nil
+	}
+	if oidc.OIDCTokenFilePath != "" {
+		data, err := os.ReadFile(oidc.OIDCTokenFilePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read oidc_token_file_path: %v", err)
+		}
+		return strings.TrimSpace(string(data)), nil
+	}
+	return "", fmt.Errorf("azuread_default_chain_auth with use_oidc=true requires ARM_OIDC_TOKEN or ARM_OIDC_TOKEN_FILE_PATH")
+}
+
+func (c *Connector) oidcTokenProvider() (string, error) {
+	const resourceID = "https://database.windows.net/"
+
+	oidc := c.FedauthOIDC
+	cred, err := azidentity.NewClientAssertionCredential(oidc.TenantID, oidc.ClientID, c.oidcGetAssertion, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create federated credential: %v", err)
+	}
+
+	token, err := cred.GetToken(context.Background(), policy.TokenRequestOptions{
+		Scopes: []string{resourceID + "/.default"},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get token: %v", err)
+	}
 
 	return token.Token, nil
 }
@@ -309,8 +372,8 @@ func (c *Connector) GetMSSQLVersion(ctx context.Context) (string, error) {
 // DatabaseExists checks if a database exists in SQL Server
 func (c *Connector) DatabaseExists(ctx context.Context, database string) (bool, error) {
 	cmd := `
-		SELECT COUNT(1) 
-		FROM sys.databases 
+		SELECT COUNT(1)
+		FROM sys.databases
 		WHERE name = @p1
 	`
 	var count int
