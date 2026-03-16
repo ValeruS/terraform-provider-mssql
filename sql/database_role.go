@@ -8,20 +8,20 @@ import (
 )
 
 func (c *Connector) GetDatabaseRole(ctx context.Context, database, roleName string) (*model.DatabaseRole, error) {
-	cmd := `SELECT 
+	cmd := `SELECT
 				dp2.principal_id,
 				dp2.name,
 				dp2.owning_principal_id,
-				CASE 
-					WHEN @@VERSION LIKE 'Microsoft SQL Azure%' 
-						AND @database = 'master' 
+				CASE
+					WHEN @@VERSION LIKE 'Microsoft SQL Azure%'
+						AND @database = 'master'
 						AND (@ownerName = 'dbo' OR @ownerName = '') THEN ''
-					ELSE dp1.name 
+					ELSE dp1.name
 				END AS ownerName
 			FROM [sys].[database_principals] dp1
-			INNER JOIN [sys].[database_principals] dp2 
-				ON dp1.principal_id = dp2.owning_principal_id 
-			WHERE dp2.type = 'R' 
+			INNER JOIN [sys].[database_principals] dp2
+				ON dp1.principal_id = dp2.owning_principal_id
+			WHERE dp2.type = 'R'
 				AND dp2.name = @roleName`
 	var role model.DatabaseRole
 	err := c.

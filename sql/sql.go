@@ -76,15 +76,15 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 }
 
 type Connector struct {
-	Host         string `json:"host"`
-	Port         string `json:"port"`
-	Database     string `json:"database"`
-	Login        *LoginUser
-	AzureLogin   *AzureLogin
-	FedauthOIDC  *FedauthOIDC
-	FedauthMSI   *FedauthMSI
-	Timeout      time.Duration `json:"timeout,omitempty"`
-	Token        string
+	Host        string `json:"host"`
+	Port        string `json:"port"`
+	Database    string `json:"database"`
+	Login       *LoginUser
+	AzureLogin  *AzureLogin
+	FedauthOIDC *FedauthOIDC
+	FedauthMSI  *FedauthMSI
+	Timeout     time.Duration `json:"timeout,omitempty"`
+	Token       string
 }
 
 type LoginUser struct {
