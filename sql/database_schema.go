@@ -8,19 +8,19 @@ import (
 )
 
 func (c *Connector) GetDatabaseSchema(ctx context.Context, database, schemaName string) (*model.DatabaseSchema, error) {
-	cmd := `SELECT 
+	cmd := `SELECT
 				dp1.schema_id,
 				dp1.name,
 				dp1.principal_id,
-				CASE 
-					WHEN @@VERSION LIKE 'Microsoft SQL Azure%' 
-						AND @database = 'master' 
+				CASE
+					WHEN @@VERSION LIKE 'Microsoft SQL Azure%'
+						AND @database = 'master'
 						AND (@ownerName = 'dbo' OR @ownerName = '') THEN ''
-					ELSE dp2.name 
+					ELSE dp2.name
 				END AS name
 			FROM [sys].[schemas] dp1
-			INNER JOIN [sys].[database_principals] dp2 
-				ON dp1.principal_id = dp2.principal_id 
+			INNER JOIN [sys].[database_principals] dp2
+				ON dp1.principal_id = dp2.principal_id
 			WHERE dp1.name = @schemaName`
 	var sqlschema model.DatabaseSchema
 	err := c.

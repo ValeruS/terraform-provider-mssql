@@ -185,79 +185,79 @@ func getObjectExistsQuery(objectSpec string) (string, error) {
 	case "TABLE":
 		if schema_Name != "" {
 			return fmt.Sprintf(`
-			SELECT 1 
-			FROM sys.tables t 
+			SELECT 1
+			FROM sys.tables t
 			INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
 			WHERE t.name = N'%s' AND s.name = N'%s'
 		`, object_Name, schema_Name), nil
 		}
 		return fmt.Sprintf(`
-			SELECT 1 
-			FROM sys.tables t 
+			SELECT 1
+			FROM sys.tables t
 			WHERE t.name = N'%s'
 		`, object_Name), nil
 	case "VIEW":
 		if schema_Name != "" {
 			return fmt.Sprintf(`
-			SELECT 1 
+			SELECT 1
 			FROM sys.views v
 			INNER JOIN sys.schemas s ON v.schema_id = s.schema_id
 			WHERE v.name = N'%s' AND s.name = N'%s'
 		`, object_Name, schema_Name), nil
 		}
 		return fmt.Sprintf(`
-			SELECT 1 
-			FROM sys.views v 
+			SELECT 1
+			FROM sys.views v
 			WHERE v.name = N'%s'
 		`, object_Name), nil
 	case "PROCEDURE", "PROC":
 		if schema_Name != "" {
 			return fmt.Sprintf(`
-			SELECT 1 
+			SELECT 1
 			FROM sys.procedures p
 			INNER JOIN sys.schemas s ON p.schema_id = s.schema_id
 			WHERE p.name = N'%s' AND s.name = N'%s'
 		`, object_Name, schema_Name), nil
 		}
 		return fmt.Sprintf(`
-			SELECT 1 
-			FROM sys.procedures p 
+			SELECT 1
+			FROM sys.procedures p
 			WHERE p.name = N'%s'
 		`, object_Name), nil
 	case "FUNCTION", "FUNC":
 		if schema_Name != "" {
 			return fmt.Sprintf(`
-			SELECT 1 
+			SELECT 1
 			FROM sys.objects o
 			INNER JOIN sys.schemas s ON o.schema_id = s.schema_id
-			WHERE o.type IN ('FN', 'IF', 'TF') 
+			WHERE o.type IN ('FN', 'IF', 'TF')
 			AND o.name = N'%s' AND s.name = N'%s'
 		`, object_Name, schema_Name), nil
 		}
 		return fmt.Sprintf(`
-			SELECT 1 
-			FROM sys.objects o 
-			WHERE o.type IN ('FN', 'IF', 'TF') 
+			SELECT 1
+			FROM sys.objects o
+			WHERE o.type IN ('FN', 'IF', 'TF')
 			AND o.name = N'%s'
 		`, object_Name), nil
 	case "SCHEMA":
 		return fmt.Sprintf(`
-			SELECT 1 
-			FROM sys.schemas s 
+			SELECT 1
+			FROM sys.schemas s
 			WHERE s.name = N'%s'
 		`, object_Name), nil
 	case "TRIGGER", "TRG":
 		if schema_Name != "" {
 			return fmt.Sprintf(`
-			SELECT 1 
+			SELECT 1
 			FROM sys.triggers t
 			INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
 			WHERE t.name = N'%s' AND s.name = N'%s'
 		`, object_Name, schema_Name), nil
 		}
 		return fmt.Sprintf(`
-			SELECT 1 
-			FROM sys.triggers t 
+			SELECT 1
+			FROM sys.triggers t
 			WHERE t.name = N'%s'
 		`, object_Name), nil
 	default:

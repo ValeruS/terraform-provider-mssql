@@ -89,7 +89,15 @@ func getServerSchema(prefix string) map[string]*schema.Schema {
 			MaxItems:     1,
 			Optional:     true,
 			ExactlyOneOf: LoginMethods,
-			Elem:         &schema.Resource{},
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"use_oidc": {
+						Type:     schema.TypeBool,
+						Optional: true,
+						Default:  false,
+					},
+				},
+			},
 		},
 		"azuread_managed_identity_auth": {
 			Type:         schema.TypeList,
