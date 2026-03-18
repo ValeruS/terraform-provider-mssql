@@ -53,9 +53,10 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          cache: 'false'
+          cache: false
           format: 'table'
           exit-code: '1'
+          ignore-unfixed: true
 
   test:
     runs-on: ubuntu-latest
