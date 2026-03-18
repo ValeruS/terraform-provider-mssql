@@ -118,39 +118,6 @@ When `use_oidc = true`, the following environment variables must be set:
 | `ARM_OIDC_TOKEN` | Signed JWT token (inline). Use this **or** `ARM_OIDC_TOKEN_FILE_PATH`. |
 | `ARM_OIDC_TOKEN_FILE_PATH` | Path to a file containing the signed JWT. The file is re-read on every token refresh. |
 
-#### Azure DevOps example with federated identity
-
-```hcl
-resource "mssql_user" "example" {
-  server {
-    host = "example.database.windows.net"
-    azuread_default_chain_auth {
-      use_oidc = true
-    }
-  }
-  database  = "dbName"
-  username  = "myuser@example.com"
-  object_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  roles     = ["db_datareader"]
-}
-```
-
-In the Azure DevOps pipeline, export the OIDC token before the Terraform tasks:
-
-```yaml
-- task: AzureCLI@2
-  displayName: 'Export OIDC token for MSSQL provider'
-  inputs:
-    azureSubscription: "${{ variables.serviceConnection }}"
-    addSpnToEnvironment: true
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      echo "##vso[task.setvariable variable=ARM_TENANT_ID]$tenantId"
-      echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$servicePrincipalId"
-      echo "##vso[task.setvariable variable=ARM_OIDC_TOKEN]$idToken"
-```
-
 The `azuread_managed_identity_auth` block supports the following arguments:
 
 * `user_id` - (Optional) Id of a user-assigned managed identity to assume. Omitting this property instructs the provider to assume a system-assigned managed identity.
