@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2]
+
+### Changed
+
+- OIDC documentation improvements thanks to [@fzavalloni](https://github.com/fzavalloni)
+- Updated GitHub Actions task versions for test and release workflows
+
 ## [0.5.1]
 
 ### Added
 
 - Native OIDC/federated identity support via `use_oidc = true` in the `azuread_default_chain_auth` block, enabling Azure DevOps
-pipelines using federated Service Connections (workload identity federation) without a client secret
+  pipelines using federated Service Connections (workload identity federation) without a client secret (thanks to [@fzavalloni](https://github.com/fzavalloni))
 
 ## [0.5.0]
 
