@@ -11,6 +11,8 @@ PKGS	 = $(shell env GO111MODULE=on $(GO) list ./... | grep -v /vendor/)
 TESTPKGS = $(shell env GO111MODULE=on $(GO) list -f \
 		'{{ if or .TestGoFiles .XTestGoFiles }}{{ .ImportPath }}{{ end }}' \
 		$(PKGS))
+TESTPKGS_MSSQL = $(filter %/mssql,$(TESTPKGS))
+TESTPKGS_OTHER = $(filter-out %/mssql,$(TESTPKGS))
 
 ifeq ($(OS),Windows_NT)
 	OPERATING_SYSTEM=Windows
@@ -64,11 +66,21 @@ install: build
 test:
 	echo $(TESTPKGS) | xargs -t -n4 $(GO) test $(TESTARGS) -timeout=30s -parallel=4
 
-testacc:
-	if [ -f .local.env ]; then source .local.env; fi && TF_ACC=1 TERRAFORM_VERSION=$(TERRAFORM_VERSION) $(GO) test $(TESTPKGS) -v $(TESTARGS) -timeout 120m
+testacc: testacc-mssql testacc-other
 
-testacc-local:
-	if [ -f .local.env ]; then source .local.env; fi && TF_ACC_LOCAL=1 TERRAFORM_VERSION=$(TERRAFORM_VERSION) $(GO) test $(TESTPKGS) -v $(TESTARGS) -timeout 120m
+testacc-mssql:
+	if [ -f .local.env ]; then source .local.env; fi && TF_ACC=1 TERRAFORM_VERSION=$(TERRAFORM_VERSION) $(GO) test $(TESTPKGS_MSSQL) -v $(TESTARGS) -timeout 120m
+
+testacc-other:
+	if [ -f .local.env ]; then source .local.env; fi && TF_ACC=1 TERRAFORM_VERSION=$(TERRAFORM_VERSION) $(GO) test $(TESTPKGS_OTHER) -v $(TESTARGS) -timeout 120m
+
+testacc-local: testacc-local-mssql testacc-local-other
+
+testacc-local-mssql:
+	if [ -f .local.env ]; then source .local.env; fi && TF_ACC_LOCAL=1 TERRAFORM_VERSION=$(TERRAFORM_VERSION) $(GO) test $(TESTPKGS_MSSQL) -v $(TESTARGS) -timeout 120m
+
+testacc-local-other:
+	if [ -f .local.env ]; then source .local.env; fi && TF_ACC_LOCAL=1 TERRAFORM_VERSION=$(TERRAFORM_VERSION) $(GO) test $(TESTPKGS_OTHER) -v $(TESTARGS) -timeout 120m
 
 docker-start:
 	cd test-fixtures/local && export TERRAFORM_VERSION=$(TERRAFORM_VERSION) && ${TERRAFORM} init && ${TERRAFORM} apply -auto-approve -var="operating_system=${OPERATING_SYSTEM}"
