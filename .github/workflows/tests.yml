@@ -31,25 +31,29 @@ jobs:
 
       - name: Run go fmt
         run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "Go files are not formatted. Run 'go fmt ./...'"
-            gofmt -l .
+          set -e
+          unformatted=$(gofmt -s -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following Go files are not formatted (run 'go fmt ./...' or 'gofmt -s -w .'):"
+            echo "$unformatted"
             exit 1
           fi
 
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
           cache: false
 
-      - name: Run govulncheck
-        uses: golang/govulncheck-action@v1
+      - name: Run Trivy scanner
+        uses: aquasecurity/trivy-action@0.33.1
         with:
-          go-package: ./...
+          scan-type: 'fs'
+          scan-ref: '.'
+          cache: 'false'
 
   test:
     runs-on: ubuntu-latest
