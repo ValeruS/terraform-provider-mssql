@@ -56,7 +56,6 @@ jobs:
           cache: 'false'
           format: 'table'
           exit-code: '1'
-          skip-setup-trivy: true
 
   test:
     runs-on: ubuntu-latest
