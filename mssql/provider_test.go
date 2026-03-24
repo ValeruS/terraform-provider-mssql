@@ -71,6 +71,7 @@ type TestConnector interface {
 	DataBaseExecuteScript(database string, sqlscript string) error
 	GetEntraIDLogin(name string) (*model.EntraIDLogin, error)
 	GetServerRole(name string) (*model.ServerRole, error)
+	GetServerRoleMember(roleName string, managedMembers []string) (*model.ServerRoleMember, error)
 	GetSystemUser() (string, error)
 	GetCurrentUser(database string) (string, string, error)
 }
@@ -202,6 +203,10 @@ func (t testConnector) GetEntraIDLogin(name string) (*model.EntraIDLogin, error)
 
 func (t testConnector) GetServerRole(roleName string) (*model.ServerRole, error) {
 	return t.c.(ServerRoleConnector).GetServerRole(context.Background(), roleName)
+}
+
+func (t testConnector) GetServerRoleMember(roleName string, managedMembers []string) (*model.ServerRoleMember, error) {
+	return t.c.(ServerRoleMemberConnector).GetServerRoleMember(context.Background(), roleName, managedMembers)
 }
 
 func (t testConnector) GetSystemUser() (string, error) {
