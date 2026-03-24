@@ -53,6 +53,7 @@ terraform
 /bin/
 /dist/
 .local.env
+.local_all.env
 terraform-provider-mssql
 terraform-provider-mssql.log
 terraform-provider-mssql.exe
