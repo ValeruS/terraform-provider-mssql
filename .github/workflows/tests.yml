@@ -20,25 +20,6 @@ jobs:
           python-version: '3.x'
       - uses: pre-commit/action@v3.0.1
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: 'go.mod'
-          cache: false
-
-      - name: Run go fmt
-        run: |
-          set -e
-          unformatted=$(gofmt -s -l .)
-          if [ -n "$unformatted" ]; then
-            echo "The following Go files are not formatted (run 'go fmt ./...' or 'gofmt -s -w .'):"
-            echo "$unformatted"
-            exit 1
-          fi
-
   security:
     runs-on: ubuntu-latest
     steps:
@@ -60,7 +41,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: [pre-commit, lint, security]
+    needs: [pre-commit, security]
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-go@v6

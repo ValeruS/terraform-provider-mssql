@@ -83,6 +83,7 @@ func testAccDataLogin(t *testing.T, name string, azure bool, data map[string]int
 				login_name = "{{ .login_name }}"
 				depends_on = [mssql_login.{{ .name }}]
 			}`
+
 	data["name"] = name
 	data["azure"] = azure
 	if azure {

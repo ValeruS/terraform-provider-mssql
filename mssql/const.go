@@ -41,4 +41,5 @@ const (
 	keylengthProp          = "key_length"
 	keyalgorithmProp       = "key_algorithm"
 	algorithmdescProp      = "algorithm_desc"
+	membersProp            = "members"
 )

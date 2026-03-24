@@ -88,6 +88,13 @@ func getServerRoleID(data *schema.ResourceData) string {
 	return fmt.Sprintf("sqlserver://%s:%s/role/%s", host, port, roleName)
 }
 
+func getServerRoleMemberID(data *schema.ResourceData) string {
+	host := data.Get(serverProp + ".0.host").(string)
+	port := data.Get(serverProp + ".0.port").(string)
+	roleName := data.Get(roleNameProp).(string)
+	return fmt.Sprintf("sqlserver://%s:%s/role_member/%s", host, port, roleName)
+}
+
 func loggerFromMeta(meta interface{}, resource, function string) zerolog.Logger {
 	return meta.(model.Provider).ResourceLogger(resource, function)
 }
@@ -117,4 +124,29 @@ func equal(a, b interface{}) bool {
 	default:
 		return a == b
 	}
+}
+
+// stringSetDiff returns strings to add (in newSet only) and to remove (in oldSet only) for two *schema.Set string lists.
+func stringSetDiff(oldSet, newSet *schema.Set) (toAdd, toRemove []string) {
+	oldList := toStringSlice(oldSet.List())
+	newList := toStringSlice(newSet.List())
+	oldMap := make(map[string]struct{}, len(oldList))
+	for _, s := range oldList {
+		oldMap[s] = struct{}{}
+	}
+	newMap := make(map[string]struct{}, len(newList))
+	for _, s := range newList {
+		newMap[s] = struct{}{}
+	}
+	for _, s := range newList {
+		if _, inOld := oldMap[s]; !inOld {
+			toAdd = append(toAdd, s)
+		}
+	}
+	for _, s := range oldList {
+		if _, inNew := newMap[s]; !inNew {
+			toRemove = append(toRemove, s)
+		}
+	}
+	return toAdd, toRemove
 }

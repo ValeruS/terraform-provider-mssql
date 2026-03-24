@@ -523,16 +523,15 @@ func TestAccUser_Azure_Update_Roles(t *testing.T) {
 }
 
 func testAccCheckUser(t *testing.T, name string, login string, data map[string]interface{}) string {
-	text := `
-			{{ if .login_name }}
-				resource "mssql_login" "{{ .name }}" {
-					server {
-						host = "{{ .host }}"
-						{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
-					}
-					login_name = "{{ .login_name }}"
-					password   = "{{ .login_password }}"
+	text := `{{ if .login_name }}
+			resource "mssql_login" "{{ .name }}" {
+				server {
+					host = "{{ .host }}"
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
+				login_name = "{{ .login_name }}"
+				password   = "{{ .login_password }}"
+			}
 			{{ end }}
 			resource "mssql_user" "{{ .name }}" {
 				server {
@@ -596,6 +595,7 @@ func testAccCheckMultipleUsers(t *testing.T, name string, login string, data map
 				depends_on = [mssql_login.{{ .name }}]
 				{{ end }}
 			}`
+
 	data["name"] = name
 	data["login"] = login
 	data["count"] = count

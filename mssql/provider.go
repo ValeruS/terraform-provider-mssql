@@ -56,6 +56,7 @@ func Provider(factory model.ConnectorFactory) *schema.Provider {
 			"mssql_database_sqlscript":        resourceDatabaseSQLScript(),
 			"mssql_entraid_login":             resourceEntraIDLogin(),
 			"mssql_server_role":               resourceServerRole(),
+			"mssql_server_role_member":        resourceServerRoleMember(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"mssql_login":                     dataSourceLogin(),
@@ -67,6 +68,7 @@ func Provider(factory model.ConnectorFactory) *schema.Provider {
 			"mssql_azure_external_datasource": datasourceAzureExternalDatasource(),
 			"mssql_entraid_login":             dataSourceEntraIDLogin(),
 			"mssql_server_role":               dataSourceServerRole(),
+			"mssql_server_role_member":        dataSourceServerRoleMember(),
 		},
 		ConfigureContextFunc: func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
 			return providerConfigure(ctx, data, factory)

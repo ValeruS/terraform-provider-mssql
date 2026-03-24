@@ -2,7 +2,6 @@ package mssql
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
@@ -50,7 +49,8 @@ func resourceDatabasePermissions() *schema.Resource {
 				Type:     schema.TypeSet,
 				Required: true,
 				Elem: &schema.Schema{
-					Type: schema.TypeString,
+					Type:         schema.TypeString,
+					ValidateFunc: validate.SQLIdentifierPermission,
 				},
 			},
 		},
@@ -66,7 +66,7 @@ func resourceDatabasePermissions() *schema.Resource {
 type DatabasePermissionsConnector interface {
 	CreateDatabasePermissions(ctx context.Context, dbPermission *model.DatabasePermissions) error
 	GetDatabasePermissions(ctx context.Context, database string, username string) (*model.DatabasePermissions, error)
-	UpdateDatabasePermissions(ctx context.Context, dbPermission *model.DatabasePermissions) error
+	UpdateDatabasePermissions(ctx context.Context, database string, username string, permissions []string, changeType string) error
 	DeleteDatabasePermissions(ctx context.Context, dbPermission *model.DatabasePermissions) error
 	DatabaseExists(ctx context.Context, database string) (bool, error)
 }
@@ -78,7 +78,6 @@ func resourceDatabasePermissionsCreate(ctx context.Context, data *schema.Resourc
 	database := data.Get(databaseProp).(string)
 	username := data.Get(usernameProp).(string)
 	permissions := data.Get(permissionsProp).(*schema.Set).List()
-	permissions_, _ := json.Marshal(permissions)
 
 	connector, err := getDatabasePermissionsConnector(meta, data)
 	if err != nil {
@@ -91,12 +90,12 @@ func resourceDatabasePermissionsCreate(ctx context.Context, data *schema.Resourc
 		Permissions:  toStringSlice(permissions),
 	}
 	if err = connector.CreateDatabasePermissions(ctx, dbPermissionModel); err != nil {
-		return diag.FromErr(errors.Wrapf(err, "unable to create database permissions %v on database [%s] for user [%s]", string(permissions_), database, username))
+		return diag.FromErr(errors.Wrapf(err, "unable to create database permissions [%s] on database [%s] for user [%s]", strings.Join(toStringSlice(permissions), ", "), database, username))
 	}
 
 	data.SetId(getDatabasePermissionsID(data))
 
-	logger.Info().Msgf("created database permissions %v on database [%s] for user [%s]", string(permissions_), database, username)
+	logger.Info().Msgf("created database permissions [%s] on database [%s] for user [%s]", strings.Join(toStringSlice(permissions), ", "), database, username)
 
 	return resourceDatabasePermissionsRead(ctx, data, meta)
 }
@@ -199,7 +198,11 @@ func resourceDatabasePermissionUpdate(ctx context.Context, data *schema.Resource
 
 	database := data.Get(databaseProp).(string)
 	username := data.Get(usernameProp).(string)
-	permissions := data.Get(permissionsProp).(*schema.Set).List()
+	oldVal, newVal := data.GetChange(permissionsProp)
+	oldPermissions := oldVal.(*schema.Set)
+	newPermissions := newVal.(*schema.Set)
+
+	toGrant, toRevoke := stringSetDiff(oldPermissions, newPermissions)
 
 	// Store old values for all properties that might change
 	oldValues := make(map[string]interface{})
@@ -217,20 +220,25 @@ func resourceDatabasePermissionUpdate(ctx context.Context, data *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	dbPermissionModel := &model.DatabasePermissions{
-		DatabaseName: database,
-		UserName:     username,
-		Permissions:  toStringSlice(permissions),
-	}
-
-	if err = connector.UpdateDatabasePermissions(ctx, dbPermissionModel); err != nil {
-		// If update fails, revert all changed values in the state
-		for prop, oldValue := range oldValues {
-			if err := data.Set(prop, oldValue); err != nil {
-				logger.Error().Err(err).Msgf("Failed to revert %s state after update error", prop)
+	if len(toGrant) > 0 {
+		if err = connector.UpdateDatabasePermissions(ctx, database, username, toGrant, "GRANT"); err != nil {
+			for prop, oldValue := range oldValues {
+				if setErr := data.Set(prop, oldValue); setErr != nil {
+					logger.Error().Err(setErr).Msgf("Failed to revert %s state after update error", prop)
+				}
 			}
+			return diag.FromErr(errors.Wrapf(err, "unable to grant permissions for user [%s] on database [%s]", username, database))
 		}
-		return diag.FromErr(errors.Wrapf(err, "unable to update permissions for user [%s] on database [%s]", username, database))
+	}
+	if len(toRevoke) > 0 {
+		if err = connector.UpdateDatabasePermissions(ctx, database, username, toRevoke, "REVOKE"); err != nil {
+			for prop, oldValue := range oldValues {
+				if setErr := data.Set(prop, oldValue); setErr != nil {
+					logger.Error().Err(setErr).Msgf("Failed to revert %s state after update error", prop)
+				}
+			}
+			return diag.FromErr(errors.Wrapf(err, "unable to revoke permissions for user [%s] on database [%s]", username, database))
+		}
 	}
 
 	data.SetId(getDatabasePermissionsID(data))
