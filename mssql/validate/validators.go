@@ -54,3 +54,13 @@ func SQLIdentifierPassword(i interface{}, k string) (warnings []string, errors [
 		return
 	}
 }
+
+func SQLIdentifierPermission(i interface{}, k string) (warnings []string, errors []error) {
+	v := i.(string)
+	if !regexp.MustCompile(`^[A-Z]+(?: [A-Z]+)*$`).MatchString(v) {
+		errors = append(errors, fmt.Errorf(
+			"invalid permission. Use uppercase letters only; for multi-word permissions use a single space between words (e.g. VIEW DEFINITION). Got %q.", v))
+	}
+
+	return
+}

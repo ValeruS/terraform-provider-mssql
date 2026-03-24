@@ -118,3 +118,28 @@ func equal(a, b interface{}) bool {
 		return a == b
 	}
 }
+
+// stringSetDiff returns strings to add (in newSet only) and to remove (in oldSet only) for two *schema.Set string lists.
+func stringSetDiff(oldSet, newSet *schema.Set) (toAdd, toRemove []string) {
+	oldList := toStringSlice(oldSet.List())
+	newList := toStringSlice(newSet.List())
+	oldMap := make(map[string]struct{}, len(oldList))
+	for _, s := range oldList {
+		oldMap[s] = struct{}{}
+	}
+	newMap := make(map[string]struct{}, len(newList))
+	for _, s := range newList {
+		newMap[s] = struct{}{}
+	}
+	for _, s := range newList {
+		if _, inOld := oldMap[s]; !inOld {
+			toAdd = append(toAdd, s)
+		}
+	}
+	for _, s := range oldList {
+		if _, inNew := newMap[s]; !inNew {
+			toRemove = append(toRemove, s)
+		}
+	}
+	return toAdd, toRemove
+}
