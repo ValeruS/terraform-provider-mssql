@@ -235,8 +235,8 @@ func TestGetConnector_AzureLogin(t *testing.T) {
 	raw := map[string]interface{}{
 		"server": []interface{}{
 			map[string]interface{}{
-				"host": "example.database.windows.net",
-				"port": "1433",
+				"host":  "example.database.windows.net",
+				"port":  "1433",
 				"login": []interface{}{},
 				"azure_login": []interface{}{
 					map[string]interface{}{
@@ -288,11 +288,11 @@ func TestGetConnector_ManagedIdentity(t *testing.T) {
 	raw := map[string]interface{}{
 		"server": []interface{}{
 			map[string]interface{}{
-				"host": "example.database.windows.net",
-				"port": "1433",
-				"login":                         []interface{}{},
-				"azure_login":                   []interface{}{},
-				"azuread_default_chain_auth":    []interface{}{},
+				"host":                       "example.database.windows.net",
+				"port":                       "1433",
+				"login":                      []interface{}{},
+				"azure_login":                []interface{}{},
+				"azuread_default_chain_auth": []interface{}{},
 				"azuread_managed_identity_auth": []interface{}{
 					map[string]interface{}{"user_id": "00000000-0000-0000-0000-000000000001"},
 				},
@@ -326,9 +326,9 @@ func serverSchemaResource() *schema.Resource {
 				Required: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"host":   {Type: schema.TypeString, Required: true},
-						"port":   {Type: schema.TypeString, Optional: true, Default: "1433"},
-						"login":  {Type: schema.TypeList, Optional: true, MaxItems: 1, Elem: &schema.Resource{Schema: map[string]*schema.Schema{"username": {Type: schema.TypeString, Optional: true}, "password": {Type: schema.TypeString, Optional: true}}}},
+						"host":        {Type: schema.TypeString, Required: true},
+						"port":        {Type: schema.TypeString, Optional: true, Default: "1433"},
+						"login":       {Type: schema.TypeList, Optional: true, MaxItems: 1, Elem: &schema.Resource{Schema: map[string]*schema.Schema{"username": {Type: schema.TypeString, Optional: true}, "password": {Type: schema.TypeString, Optional: true}}}},
 						"azure_login": {Type: schema.TypeList, Optional: true, MaxItems: 1, Elem: &schema.Resource{Schema: map[string]*schema.Schema{"tenant_id": {Type: schema.TypeString, Optional: true}, "client_id": {Type: schema.TypeString, Optional: true}, "client_secret": {Type: schema.TypeString, Optional: true}}}},
 						"azuread_default_chain_auth": {
 							Type:     schema.TypeList,
