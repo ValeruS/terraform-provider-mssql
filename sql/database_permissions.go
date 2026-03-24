@@ -9,7 +9,7 @@ import (
 )
 
 func (c *Connector) GetDatabasePermissions(ctx context.Context, database string, username string) (*model.DatabasePermissions, error) {
-	cmd := `SELECT DISTINCT pr.principal_id, pr.name, pe.permission_name 
+	cmd := `SELECT DISTINCT pr.principal_id, pr.name, pe.permission_name
 			FROM [sys].[database_principals] AS pr LEFT JOIN [sys].[database_permissions] AS pe
 			ON pe.grantee_principal_id = pr.principal_id
 			WHERE pr.name = @username AND pe.[state] = 'G'`
