@@ -88,6 +88,13 @@ func getServerRoleID(data *schema.ResourceData) string {
 	return fmt.Sprintf("sqlserver://%s:%s/role/%s", host, port, roleName)
 }
 
+func getDatabaseID(data *schema.ResourceData) string {
+	host := data.Get(serverProp + ".0.host").(string)
+	port := data.Get(serverProp + ".0.port").(string)
+	name := data.Get(dbNameProp).(string)
+	return fmt.Sprintf("sqlserver://%s:%s/database/%s", host, port, name)
+}
+
 func getServerRoleMemberID(data *schema.ResourceData) string {
 	host := data.Get(serverProp + ".0.host").(string)
 	port := data.Get(serverProp + ".0.port").(string)

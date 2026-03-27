@@ -42,4 +42,7 @@ const (
 	keyalgorithmProp       = "key_algorithm"
 	algorithmdescProp      = "algorithm_desc"
 	membersProp            = "members"
+	dbNameProp             = "name"
+	collationProp          = "collation"
+	dbIDProp               = "database_id"
 )
