@@ -2,6 +2,17 @@
 
 The `mssql_database` resource allows you to create and manage databases on a SQL Server instance.
 
+## Compatibility
+
+| Platform | Supported | Notes |
+|---|---|---|
+| AWS RDS SQL Server | Yes | Primary use case for this resource. |
+| Azure SQL Managed Instance | Yes | Behaves like on-premises SQL Server. |
+| On-premises / self-hosted SQL Server | Yes | Full support. |
+| Azure SQL Database (PaaS) | **No** | Use [`azurerm_mssql_database`](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_database) from the AzureRM provider instead. This resource will return an error if applied against an Azure SQL Database endpoint. |
+
+> **Azure SQL Database note:** Although `CREATE DATABASE` can technically be executed via T-SQL on Azure SQL Database, doing so bypasses Azure Resource Manager entirely. That means you have no control over service tier, compute size (DTUs/vCores), elastic pool membership, backup retention, or geo-replication — all of which must be configured through the Azure API. Use `azurerm_mssql_database` for Azure SQL Database lifecycle management, then use this provider to manage objects *within* those databases (users, roles, permissions, schemas).
+
 ## Example Usage
 
 ### Basic usage

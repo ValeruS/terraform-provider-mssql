@@ -60,6 +60,7 @@ func resourceDatabase() *schema.Resource {
 }
 
 type DatabaseConnector interface {
+	GetMSSQLVersion(ctx context.Context) (string, error)
 	CreateDatabase(ctx context.Context, databaseName string, collation string) error
 	GetDatabase(ctx context.Context, databaseName string) (*model.Database, error)
 	UpdateDatabaseCollation(ctx context.Context, databaseName string, collation string) error
@@ -76,6 +77,16 @@ func resourceDatabaseCreate(ctx context.Context, data *schema.ResourceData, meta
 	connector, err := getDatabaseConnector(meta, data)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	version, err := connector.GetMSSQLVersion(ctx)
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err, "unable to get SQL Server version"))
+	}
+	if strings.Contains(version, "Microsoft SQL Azure") {
+		return diag.Errorf("mssql_database is not supported on Azure SQL Database. " +
+			"Use the azurerm_mssql_database resource from the AzureRM provider to manage Azure SQL Database databases. " +
+			"This resource supports AWS RDS SQL Server, Azure SQL Managed Instance, and on-premises SQL Server.")
 	}
 
 	if err = connector.CreateDatabase(ctx, name, collation); err != nil {

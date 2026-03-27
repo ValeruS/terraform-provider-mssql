@@ -2,6 +2,12 @@
 
 The `mssql_database` data source obtains information about an existing database on a SQL Server instance.
 
+## Compatibility
+
+This data source reads from `sys.databases` and works across all SQL Server variants: AWS RDS SQL Server, Azure SQL Managed Instance, Azure SQL Database, and on-premises SQL Server.
+
+Note: if you manage your Azure SQL Database databases via `azurerm_mssql_database`, you can still use this data source to read their properties (e.g. collation, database ID) for use in other resources.
+
 ## Example Usage
 
 ```hcl
