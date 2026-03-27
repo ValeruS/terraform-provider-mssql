@@ -72,6 +72,7 @@ type TestConnector interface {
 	GetEntraIDLogin(name string) (*model.EntraIDLogin, error)
 	GetServerRole(name string) (*model.ServerRole, error)
 	GetServerRoleMember(roleName string, managedMembers []string) (*model.ServerRoleMember, error)
+	GetDatabase(name string) (*model.Database, error)
 	GetSystemUser() (string, error)
 	GetCurrentUser(database string) (string, string, error)
 }
@@ -203,6 +204,10 @@ func (t testConnector) GetEntraIDLogin(name string) (*model.EntraIDLogin, error)
 
 func (t testConnector) GetServerRole(roleName string) (*model.ServerRole, error) {
 	return t.c.(ServerRoleConnector).GetServerRole(context.Background(), roleName)
+}
+
+func (t testConnector) GetDatabase(name string) (*model.Database, error) {
+	return t.c.(DatabaseConnector).GetDatabase(context.Background(), name)
 }
 
 func (t testConnector) GetServerRoleMember(roleName string, managedMembers []string) (*model.ServerRoleMember, error) {
