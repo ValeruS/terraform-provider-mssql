@@ -41,4 +41,8 @@ const (
 	keyalgorithmProp       = "key_algorithm"
 	algorithmdescProp      = "algorithm_desc"
 	membersProp            = "members"
+	databaseNameProp       = "database_name"
+	collationProp          = "collation"
+	databaseIdProp         = "database_id"
+	compatibilityLevelProp = "compatibility_level"
 )
