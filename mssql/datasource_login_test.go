@@ -17,7 +17,7 @@ func TestAccDataLogin_Local_Basic(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccDataLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataLogin(t, "basic", false, map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
+				Config: testAccDataLogin(t, "basic", "login", map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "id", "sqlserver://localhost:1433/login/login_basic"),
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "login_name", "login_basic"),
@@ -43,7 +43,7 @@ func TestAccDataLogin_Azure_Basic(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccDataLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataLogin(t, "basic", true, map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
+				Config: testAccDataLogin(t, "basic", "azure", map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "id", "sqlserver://"+os.Getenv("TF_ACC_SQL_SERVER")+":1433/login/login_basic"),
 					resource.TestCheckResourceAttr("data.mssql_login.basic", "login_name", "login_basic"),
@@ -63,11 +63,11 @@ func TestAccDataLogin_Azure_Basic(t *testing.T) {
 	})
 }
 
-func testAccDataLogin(t *testing.T, name string, azure bool, data map[string]interface{}) string {
+func testAccDataLogin(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `resource "mssql_login" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
-					{{ if .azure }}azure_login {}{{ else }}login {}{{ end }}
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				login_name = "{{ .login_name }}"
 				password   = "{{ .password }}"
@@ -78,18 +78,21 @@ func testAccDataLogin(t *testing.T, name string, azure bool, data map[string]int
 			data "mssql_login" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
-					{{ if .azure }}azure_login {}{{ else }}login {}{{ end }}
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				login_name = "{{ .login_name }}"
 				depends_on = [mssql_login.{{ .name }}]
 			}`
 
 	data["name"] = name
-	data["azure"] = azure
-	if azure {
+	data["login"] = login
+	switch login {
+	case "fedauth", "msi", "azure":
 		data["host"] = os.Getenv("TF_ACC_SQL_SERVER")
-	} else {
+	case "login":
 		data["host"] = "localhost"
+	default:
+		t.Fatalf("login expected to be one of 'login', 'azure', 'msi', 'fedauth', got %s", login)
 	}
 	res, err := templateToString(name, text, data)
 	if err != nil {
