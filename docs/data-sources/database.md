@@ -26,23 +26,6 @@ output "compatibility_level" {
 }
 ```
 
-### RDS SQL Server
-
-```hcl
-data "mssql_database" "example" {
-  server {
-    host = "myinstance.xxxxxxxxxx.us-east-1.rds.amazonaws.com"
-    port = "1433"
-    login {
-      username = var.mssql_username
-      password = var.mssql_password
-    }
-  }
-
-  database_name = "example-db"
-}
-```
-
 ## Argument Reference
 
 The following arguments are supported:
