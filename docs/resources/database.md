@@ -2,7 +2,7 @@
 
 The `mssql_database` resource allows you to create and manage databases on a SQL Server instance.
 
-> **Azure SQL Database note:** Although `CREATE DATABASE` can be executed via T-SQL on Azure SQL Database, doing so bypasses Azure Resource Manager entirely. That means you have no control over service tier, compute size (DTUs/vCores), elastic pool membership, backup retention, or geo-replication — all of which must be configured through the Azure API. Use `azurerm_mssql_database` for Azure SQL Database lifecycle management, then use this provider to manage objects *within* those databases (users, roles, permissions, schemas). This resource will return an error if applied against an Azure SQL Database.
+-> **Azure SQL Database note:** Although `CREATE DATABASE` can be executed via T-SQL on Azure SQL Database, doing so bypasses Azure Resource Manager entirely. That means you have no control over service tier, compute size (DTUs/vCores), elastic pool membership, backup retention, or geo-replication — all of which must be configured through the Azure API. Use `azurerm_mssql_database` for Azure SQL Database lifecycle management, then use this provider to manage objects *within* those databases (users, roles, permissions, schemas). This resource will return an error if applied against an Azure SQL Database.
 
 ## Example Usage
 
@@ -44,7 +44,7 @@ resource "mssql_database" "example" {
 The following arguments are supported:
 
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
-* `name` - (Required) The name of the database. hanging this resource property modifies the existing resource.
+* `database_name` - (Required) The name of the database. Changing this resource property modifies the existing resource.
 * `collation` - (Optional) The collation of the database, e.g. `SQL_Latin1_General_CP1_CI_AS`. If not specified, the server's default collation is used. Changing this resource property modifies the existing resource.
 
 The `server` block supports the following arguments:

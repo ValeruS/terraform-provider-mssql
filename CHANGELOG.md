@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1]
+
+### Fixed
+
+- Documentation for `mssql_database` resource: use `database_name` instead of `name` in argument reference
+
 ## [0.7.0]
 
 ### Added
