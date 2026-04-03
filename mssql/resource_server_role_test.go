@@ -168,11 +168,12 @@ func testAccCheckServerRole(t *testing.T, name string, login string, data map[st
 
 	data["name"] = name
 	data["login"] = login
-	if login == "fedauth" || login == "msi" || login == "azure" {
+	switch login {
+	case "fedauth", "msi", "azure":
 		data["host"] = os.Getenv("TF_ACC_SQL_SERVER")
-	} else if login == "login" {
+	case "login":
 		data["host"] = "localhost"
-	} else {
+	default:
 		t.Fatalf("login expected to be one of 'login', 'azure', 'msi', 'fedauth', got %s", login)
 	}
 	res, err := templateToString(name, text, data)

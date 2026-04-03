@@ -8,7 +8,6 @@ const (
 	objectIdProp           = "object_id"
 	passwordProp           = "password"
 	sidStrProp             = "sid"
-	clientIdProp           = "client_id"
 	authenticationTypeProp = "authentication_type"
 	defaultSchemaProp      = "default_schema"
 	defaultDboPropDefault  = "dbo"
