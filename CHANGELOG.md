@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Added
+
+- New resource `mssql_database` for creating and managing databases (not supported on Azure SQL Database; use `azurerm_mssql_database` there) (thanks to [@evonz-mx](https://github.com/evonz-mx))
+- New data source `mssql_database` for reading database metadata from `sys.databases` (collation, `database_id`, compatibility level) (thanks to [@evonz-mx](https://github.com/evonz-mx))
+
+### Fixed
+
+- Fixed formatting in test cases
+
 ## [0.6.0]
 
 ### Added
