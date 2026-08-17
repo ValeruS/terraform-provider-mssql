@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2]
+
+### Changed
+
+- Updated Go module dependencies to address Dependabot security alerts
+
 ## [0.7.1]
 
 ### Fixed
