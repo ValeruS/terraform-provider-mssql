@@ -24,6 +24,7 @@ resource "mssql_database_credential" "example" {
     host = "example-sql-server.database.windows.net"
     azure_login {}
   }
+
   database        = "example-db"
   credential_name = "example-credential-name"
   identity_name   = "example-identity"

@@ -13,6 +13,7 @@ data "mssql_user" "example" {
       password = "password"
     }
   }
+
   database  = "master"
   user_name = "testuser"
 }

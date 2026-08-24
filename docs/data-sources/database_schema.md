@@ -14,6 +14,7 @@ data "mssql_database_schema" "example" {
       client_secret = "xxxxxxxxxxxxxxxxxxxxxx"
     }
   }
+
   database    = "my-database"
   schema_name = "example-schema-name"
 }

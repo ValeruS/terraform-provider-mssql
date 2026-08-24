@@ -16,8 +16,9 @@ resource "mssql_user" "example" {
       client_secret = "terriblySecretSecret"
     }
   }
+
   username = "user@example.com"
-  roles    = [ "db_owner" ]
+  roles    = ["db_owner"]
 }
 ```
 
@@ -46,7 +47,6 @@ resource "mssql_user" "example" {
   database  = "my-database"
   username  = azurerm_user_assigned_identity.example.name
   object_id = azurerm_user_assigned_identity.example.client_id
-
   roles     = ["db_datareader"]
 }
 
@@ -61,7 +61,6 @@ resource "mssql_user" "example_group" {
   username  = "Microsoft Entra Group Name"
   object_id = "Microsoft Entra Group Object ID"
   type      = "X"
-
   roles     = ["db_datareader"]
 }
 ```

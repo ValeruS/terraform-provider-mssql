@@ -15,6 +15,7 @@ resource "mssql_server_role" "example" {
       password = "MySuperSecr3t!"
     }
   }
+
   role_name = "example-role-name"
 }
 ```
@@ -30,6 +31,7 @@ resource "mssql_server_role" "example" {
       password = "MySuperSecr3t!"
     }
   }
+
   role_name  = "example-role-name"
   owner_name = "securityadmin"
 }

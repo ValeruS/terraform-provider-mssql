@@ -1,4 +1,4 @@
-# mssql_database_role
+# mssql_database_schema
 
 The `mssql_database_schema` resource allows you to create and manage database schemas in SQL Server.
 
@@ -16,15 +16,16 @@ resource "mssql_database_schema" "example" {
       client_secret = "terriblySecretSecret"
     }
   }
-  database      = "master"
-  schema_name     = "example-schema-name"
+
+  database    = "master"
+  schema_name = "example-schema-name"
 }
 ```
 
 ### Using AUTHORIZATION
 
 ```hcl
-resource "mssql_database_role" "example" {
+resource "mssql_database_schema" "example" {
   server {
     host = "example-sql-server.database.windows.net"
     azure_login {
@@ -33,9 +34,10 @@ resource "mssql_database_role" "example" {
       client_secret = "terriblySecretSecret"
     }
   }
-  database   = "my-database"
-  schema_name  = "example-schema-name"
-  owner_name = "example_username"
+
+  database    = "my-database"
+  schema_name = "example-schema-name"
+  owner_name  = "example_username"
 }
 ```
 

@@ -10,7 +10,9 @@ resource "mssql_login" "example" {
     host = "example-sql-server.database.windows.net"
     azure_login {}
   }
+
   login_name = "testlogin"
+  password   = "SecretPassword!"
 }
 ```
 

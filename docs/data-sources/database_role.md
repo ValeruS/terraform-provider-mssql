@@ -14,6 +14,7 @@ data "mssql_database_role" "example" {
       client_secret = "xxxxxxxxxxxxxxxxxxxxxx"
     }
   }
+
   database  = "master"
   role_name = "example-role-name"
 }

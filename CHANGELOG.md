@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3]
+
+### Fixed
+
+- Documentation examples: fix resource examples and HCL formatting
+
 ## [0.7.2]
 
 ### Changed

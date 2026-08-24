@@ -10,6 +10,7 @@ resource "mssql_database_permissions" "example" {
     host = "example-sql-server.database.windows.net"
     azure_login {}
   }
+
   database = "example"
   username = "sql_username"
   permissions = [
