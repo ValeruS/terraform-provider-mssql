@@ -15,6 +15,7 @@ resource "mssql_server_role" "example" {
       password = "MySuperSecr3t!"
     }
   }
+
   role_name = "my_custom_role"
 }
 
@@ -26,6 +27,7 @@ resource "mssql_login" "member" {
       password = "MySuperSecr3t!"
     }
   }
+
   login_name = "member_login"
   password   = "P@ssW0rd"
 }
@@ -38,6 +40,7 @@ resource "mssql_server_role_member" "example" {
       password = "MySuperSecr3t!"
     }
   }
+
   role_name = mssql_server_role.example.role_name
   members   = [mssql_login.member.login_name]
 }
@@ -52,6 +55,7 @@ resource "mssql_server_role_member" "sysadmin" {
       password = "MySuperSecr3t!"
     }
   }
+
   role_name = "sysadmin"
   members   = ["my_login"]
 }

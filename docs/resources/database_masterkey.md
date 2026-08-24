@@ -10,6 +10,7 @@ resource "mssql_database_masterkey" "example" {
     host = "example-sql-server.database.windows.net"
     azure_login {}
   }
+
   database = "example-db"
   password = "strong password"
 }

@@ -12,6 +12,7 @@ data "mssql_server_role_member" "example" {
       password = "MySuperSecr3t!"
     }
   }
+
   role_name = "sysadmin"
 }
 
@@ -32,6 +33,7 @@ data "mssql_server_role_member" "state_reader" {
       client_secret = "terriblySecretSecret"
     }
   }
+
   role_name = "##MS_ServerStateReader##"
 }
 ```

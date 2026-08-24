@@ -14,6 +14,7 @@ data "mssql_entraid_login" "example" {
       client_secret = "xxxxxxxxxxxxxxxxxxxxxx"
     }
   }
+
   login_name = "user@example.com"
 }
 ```

@@ -14,7 +14,8 @@ data "mssql_database_permissions" "example" {
       client_secret = "xxxxxxxxxxxxxxxxxxxxxx"
     }
   }
-  database  = "example"
+
+  database = "example"
   username = "example-username"
 }
 ```

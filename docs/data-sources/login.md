@@ -13,6 +13,7 @@ data "mssql_login" "example" {
       password = "password"
     }
   }
+
   login_name = "testlogin"
 }
 ```

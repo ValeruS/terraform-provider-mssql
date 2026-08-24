@@ -14,7 +14,8 @@ data "mssql_database_credential" "example" {
       client_secret = "xxxxxxxxxxxxxxxxxxxxxx"
     }
   }
-  database  = "example"
+
+  database        = "example"
   credential_name = "example-credential-name"
 }
 ```

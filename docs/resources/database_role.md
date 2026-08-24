@@ -16,8 +16,9 @@ resource "mssql_database_role" "example" {
       client_secret = "terriblySecretSecret"
     }
   }
-  database      = "master"
-  role_name     = "example-role-name"
+
+  database  = "master"
+  role_name = "example-role-name"
 }
 ```
 
@@ -33,6 +34,7 @@ resource "mssql_database_role" "example" {
       client_secret = "terriblySecretSecret"
     }
   }
+
   database   = "my-database"
   role_name  = "example-role-name"
   owner_name = "example_username"

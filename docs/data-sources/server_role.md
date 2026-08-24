@@ -13,6 +13,7 @@ data "mssql_server_role" "example" {
       password = "MySuperSecr3t!"
     }
   }
+
   role_name = "example-role-name"
 }
 ```

@@ -17,8 +17,9 @@ data "mssql_azure_external_datasource" "rdbms" {
       client_secret = "terriblySecretSecret"
     }
   }
-  database             = "example_db"
-  data_source_name     = "example_name"
+
+  database         = "example_db"
+  data_source_name = "example_name"
 }
 ```
 ## Argument Reference

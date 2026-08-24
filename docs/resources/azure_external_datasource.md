@@ -7,13 +7,13 @@ The `mssql_azure_external_datasource` resource allows you to create and manage e
 ## Example Usage
 
 ```hcl
-resource "mssql_database_masterkey" "name" {
+resource "mssql_database_masterkey" "example" {
   server {
     host = "example-sql-server.database.windows.net"
     azure_login {
-      tenant_id     = tenant_id
-      client_id     = client_id
-      client_secret = client_secret
+      tenant_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      client_secret = "terriblySecretSecret"
     }
   }
 
@@ -26,6 +26,7 @@ resource "mssql_database_credential" "example" {
     host = "example-sql-server.database.windows.net"
     azure_login {}
   }
+
   database        = "example-db"
   credential_name = "example-credential-name"
   identity_name   = "example-identity"
@@ -41,6 +42,7 @@ resource "mssql_azure_external_datasource" "rdbms" {
       client_secret = "terriblySecretSecret"
     }
   }
+
   database             = "example_db"
   data_source_name     = "example_name"
   location             = "remote_server_name.database.windows.net"

@@ -26,6 +26,7 @@ resource "mssql_login" "example" {
       password = "MySuperSecr3t!"
     }
   }
+
   login_name = "testlogin"
   password   = "NotSoS3cret?"
 }
@@ -38,6 +39,7 @@ resource "mssql_user" "example" {
       password = "MySuperSecr3t!"
     }
   }
+
   username   = "testuser"
   login_name = mssql_login.example.login_name
 }
@@ -67,6 +69,7 @@ resource "mssql_user" "example" {
       use_oidc = true
     }
   }
+
   database  = "dbName"
   username  = "myuser@example.com"
   object_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
