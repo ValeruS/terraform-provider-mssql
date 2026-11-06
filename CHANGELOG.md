@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `azuread_default_chain_auth` with `use_oidc = true`: Azure DevOps Pipelines OIDC via `ARM_ADO_PIPELINE_SERVICE_CONNECTION_ID` (or `ARM_OIDC_AZURE_SERVICE_CONNECTION_ID`) and `SYSTEM_ACCESSTOKEN` (or `ARM_OIDC_REQUEST_TOKEN`), with automatic token refresh
+- Provider arguments `tenant_id`, `client_id`, `use_oidc`, `oidc_token`, `oidc_token_file_path`, `oidc_azure_service_connection_id` and `oidc_request_token`, named like the `azurerm` provider and falling back to the same environment variables (including `ARM_USE_OIDC`)
+
 ## [0.7.3]
 
 ### Fixed

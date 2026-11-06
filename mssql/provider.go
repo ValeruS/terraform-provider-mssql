@@ -18,6 +18,7 @@ import (
 type mssqlProvider struct {
 	factory model.ConnectorFactory
 	logger  *zerolog.Logger
+	auth    model.AzureAuth
 }
 
 const (
@@ -42,6 +43,50 @@ func Provider(factory model.ConnectorFactory) *schema.Provider {
 				Description: fmt.Sprintf("Enable provider debug logging (logs to file %s)", providerLogFile),
 				Optional:    true,
 				Default:     false,
+			},
+			"tenant_id": {
+				Type:        schema.TypeString,
+				Description: "The Tenant ID used by `azuread_default_chain_auth` with `use_oidc`.",
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("ARM_TENANT_ID", ""),
+			},
+			"client_id": {
+				Type:        schema.TypeString,
+				Description: "The Client ID used by `azuread_default_chain_auth` with `use_oidc`.",
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("ARM_CLIENT_ID", ""),
+			},
+			"use_oidc": {
+				Type:        schema.TypeBool,
+				Description: "Use OIDC for every `azuread_default_chain_auth` block.",
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("ARM_USE_OIDC", false),
+			},
+			"oidc_token": {
+				Type:        schema.TypeString,
+				Description: "The OIDC ID token for workload identity federation.",
+				Optional:    true,
+				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("ARM_OIDC_TOKEN", ""),
+			},
+			"oidc_token_file_path": {
+				Type:        schema.TypeString,
+				Description: "The path to a file containing an OIDC ID token for workload identity federation.",
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("ARM_OIDC_TOKEN_FILE_PATH", ""),
+			},
+			"oidc_azure_service_connection_id": {
+				Type:        schema.TypeString,
+				Description: "The Azure DevOps Pipelines service connection ID used to request an OIDC token.",
+				Optional:    true,
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"ARM_ADO_PIPELINE_SERVICE_CONNECTION_ID", "ARM_OIDC_AZURE_SERVICE_CONNECTION_ID"}, ""),
+			},
+			"oidc_request_token": {
+				Type:        schema.TypeString,
+				Description: "The Azure DevOps Pipelines system access token used to request an OIDC token.",
+				Optional:    true,
+				Sensitive:   true,
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"ARM_OIDC_REQUEST_TOKEN", "SYSTEM_ACCESSTOKEN"}, ""),
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -84,11 +129,21 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData, factory m
 
 	logger.Info().Msg("Created provider")
 
-	return mssqlProvider{factory: factory, logger: logger}, nil
+	auth := model.AzureAuth{
+		TenantID:            data.Get("tenant_id").(string),
+		ClientID:            data.Get("client_id").(string),
+		UseOIDC:             data.Get("use_oidc").(bool),
+		OIDCToken:           data.Get("oidc_token").(string),
+		OIDCTokenFilePath:   data.Get("oidc_token_file_path").(string),
+		ServiceConnectionID: data.Get("oidc_azure_service_connection_id").(string),
+		OIDCRequestToken:    data.Get("oidc_request_token").(string),
+	}
+
+	return mssqlProvider{factory: factory, logger: logger, auth: auth}, nil
 }
 
 func (p mssqlProvider) GetConnector(prefix string, data *schema.ResourceData) (interface{}, error) {
-	return p.factory.GetConnector(prefix, data)
+	return p.factory.GetConnector(prefix, data, p.auth)
 }
 
 func (p mssqlProvider) ResourceLogger(resource, function string) zerolog.Logger {

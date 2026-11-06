@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -88,11 +90,7 @@ func TestOIDCGetAssertion_NeitherSet(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestGetConnector_DefaultChainOIDC(t *testing.T) {
-	// Set the env vars that GetConnector reads when use_oidc = true.
-	t.Setenv("ARM_TENANT_ID", "env-tenant")
-	t.Setenv("ARM_CLIENT_ID", "env-client")
-	t.Setenv("ARM_OIDC_TOKEN", "env-token")
-	t.Setenv("ARM_OIDC_TOKEN_FILE_PATH", "")
+	auth := model.AzureAuth{TenantID: "env-tenant", ClientID: "env-client", OIDCToken: "env-token"}
 
 	res := serverSchemaResource()
 	raw := map[string]interface{}{
@@ -113,7 +111,7 @@ func TestGetConnector_DefaultChainOIDC(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, res.Schema, raw)
 
 	f := new(factory)
-	iface, err := f.GetConnector("server", d)
+	iface, err := f.GetConnector("server", d, auth)
 	if err != nil {
 		t.Fatalf("GetConnector returned error: %v", err)
 	}
@@ -166,7 +164,7 @@ func TestGetConnector_DefaultChainOIDC_False(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, res.Schema, raw)
 
 	f := new(factory)
-	iface, err := f.GetConnector("server", d)
+	iface, err := f.GetConnector("server", d, model.AzureAuth{})
 	if err != nil {
 		t.Fatalf("GetConnector returned error: %v", err)
 	}
@@ -174,6 +172,98 @@ func TestGetConnector_DefaultChainOIDC_False(t *testing.T) {
 	c := iface.(*Connector)
 	if c.FedauthOIDC != nil {
 		t.Error("FedauthOIDC should be nil when oidc = false")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Azure DevOps Pipelines OIDC
+// ---------------------------------------------------------------------------
+
+func TestGetConnector_DefaultChainOIDC_AzurePipelines(t *testing.T) {
+	// Provider-level use_oidc applies to an empty azuread_default_chain_auth block.
+	auth := model.AzureAuth{
+		TenantID:            "env-tenant",
+		ClientID:            "env-client",
+		UseOIDC:             true,
+		ServiceConnectionID: "env-service-connection",
+		OIDCRequestToken:    "env-access-token",
+	}
+
+	res := serverSchemaResource()
+	raw := map[string]interface{}{
+		"server": []interface{}{
+			map[string]interface{}{
+				"host":                       "test.database.windows.net",
+				"port":                       "1433",
+				"azuread_default_chain_auth": []interface{}{map[string]interface{}{}},
+			},
+		},
+	}
+
+	d := schema.TestResourceDataRaw(t, res.Schema, raw)
+
+	iface, err := new(factory).GetConnector("server", d, auth)
+	if err != nil {
+		t.Fatalf("GetConnector returned error: %v", err)
+	}
+
+	c := iface.(*Connector)
+	if c.FedauthOIDC == nil {
+		t.Fatal("FedauthOIDC should be set when the provider use_oidc = true")
+	}
+	if c.FedauthOIDC.ServiceConnectionID != "env-service-connection" {
+		t.Errorf("ServiceConnectionID: got %q, want %q", c.FedauthOIDC.ServiceConnectionID, "env-service-connection")
+	}
+	if c.FedauthOIDC.SystemAccessToken != "env-access-token" {
+		t.Errorf("SystemAccessToken: got %q, want %q", c.FedauthOIDC.SystemAccessToken, "env-access-token")
+	}
+}
+
+func TestOIDCCredential_AzurePipelines(t *testing.T) {
+	t.Setenv("SYSTEM_OIDCREQUESTURI", "https://dev.azure.com/org/project/_apis/distributedtask/hubs/build/plans/x/jobs/y/oidctoken")
+	c := newFederatedConnector("tid", "cid", "", "")
+	c.FedauthOIDC.ServiceConnectionID = "scid"
+	c.FedauthOIDC.SystemAccessToken = "access-token"
+
+	cred, err := c.oidcCredential()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := cred.(*azidentity.AzurePipelinesCredential); !ok {
+		t.Errorf("expected *azidentity.AzurePipelinesCredential, got %T", cred)
+	}
+}
+
+func TestOIDCCredential_AzurePipelinesMissingAccessToken(t *testing.T) {
+	c := newFederatedConnector("tid", "cid", "", "")
+	c.FedauthOIDC.ServiceConnectionID = "scid"
+
+	if _, err := c.oidcCredential(); err == nil {
+		t.Fatal("expected error when SYSTEM_ACCESSTOKEN is missing")
+	}
+}
+
+func TestOIDCCredential_AzurePipelinesMissingClientID(t *testing.T) {
+	c := newFederatedConnector("tid", "", "", "")
+	c.FedauthOIDC.ServiceConnectionID = "scid"
+	c.FedauthOIDC.SystemAccessToken = "access-token"
+
+	if _, err := c.oidcCredential(); err == nil {
+		t.Fatal("expected error when ARM_CLIENT_ID is missing")
+	}
+}
+
+func TestOIDCCredential_TokenTakesPrecedenceOverAzurePipelines(t *testing.T) {
+	c := newFederatedConnector("tid", "cid", "inline-token", "")
+	c.FedauthOIDC.ServiceConnectionID = "scid"
+	c.FedauthOIDC.SystemAccessToken = "access-token"
+
+	cred, err := c.oidcCredential()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := cred.(*azidentity.ClientAssertionCredential); !ok {
+		t.Errorf("expected *azidentity.ClientAssertionCredential, got %T", cred)
 	}
 }
 
@@ -200,7 +290,7 @@ func TestGetConnector_Login(t *testing.T) {
 
 	d := schema.TestResourceDataRaw(t, res.Schema, raw)
 	f := new(factory)
-	iface, err := f.GetConnector("server", d)
+	iface, err := f.GetConnector("server", d, model.AzureAuth{})
 	if err != nil {
 		t.Fatalf("GetConnector returned error: %v", err)
 	}
@@ -253,7 +343,7 @@ func TestGetConnector_AzureLogin(t *testing.T) {
 
 	d := schema.TestResourceDataRaw(t, res.Schema, raw)
 	f := new(factory)
-	iface, err := f.GetConnector("server", d)
+	iface, err := f.GetConnector("server", d, model.AzureAuth{})
 	if err != nil {
 		t.Fatalf("GetConnector returned error: %v", err)
 	}
@@ -302,7 +392,7 @@ func TestGetConnector_ManagedIdentity(t *testing.T) {
 
 	d := schema.TestResourceDataRaw(t, res.Schema, raw)
 	f := new(factory)
-	iface, err := f.GetConnector("server", d)
+	iface, err := f.GetConnector("server", d, model.AzureAuth{})
 	if err != nil {
 		t.Fatalf("GetConnector returned error: %v", err)
 	}

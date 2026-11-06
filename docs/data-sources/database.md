@@ -55,9 +55,9 @@ The `azure_login` block supports the following arguments:
 
 The `azuread_default_chain_auth` block supports the following arguments:
 
-* `use_oidc` - (Optional) When `true`, authenticates using a federated/OIDC credential (workload identity federation) instead of the default credential chain. Credentials are read from the environment variables below. Defaults to `false`.
+* `use_oidc` - (Optional) When `true`, authenticates using a federated/OIDC credential (workload identity federation) instead of the default credential chain. Credentials are read from the provider configuration or the environment variables below; see the [provider argument reference](../index.md#argument-reference). OIDC is also enabled when the provider `use_oidc` (or `ARM_USE_OIDC`) is `true`. Defaults to `false`.
 
-When `use_oidc = true`, the following environment variables must be set:
+When `use_oidc = true`, the following must be set, either as environment variables or as the matching provider arguments (`tenant_id`, `client_id`, `oidc_token`, `oidc_token_file_path`):
 
 | Variable | Description |
 |---|---|
@@ -65,6 +65,14 @@ When `use_oidc = true`, the following environment variables must be set:
 | `ARM_CLIENT_ID` | Client ID of the App Registration |
 | `ARM_OIDC_TOKEN` | Signed JWT token (inline). Use this **or** `ARM_OIDC_TOKEN_FILE_PATH`. |
 | `ARM_OIDC_TOKEN_FILE_PATH` | Path to a file containing the signed JWT. The file is re-read on every token refresh. |
+
+To use Azure DevOps Pipelines instead of a pre-fetched token, leave `ARM_OIDC_TOKEN` and `ARM_OIDC_TOKEN_FILE_PATH` unset and set the following (or the provider arguments `oidc_azure_service_connection_id` and `oidc_request_token`). The provider requests a fresh OIDC token from the pipeline whenever it needs one, so long runs do not fail when the token expires.
+
+| Variable | Description |
+|---|---|
+| `ARM_ADO_PIPELINE_SERVICE_CONNECTION_ID` | ID of the Azure Resource Manager service connection that uses workload identity federation. `ARM_OIDC_AZURE_SERVICE_CONNECTION_ID` is also accepted. |
+| `SYSTEM_ACCESSTOKEN` | The pipeline's `System.AccessToken`. It must be mapped explicitly in the step's `env`. `ARM_OIDC_REQUEST_TOKEN` is also accepted. |
+| `SYSTEM_OIDCREQUESTURI` | Set automatically by Azure DevOps. |
 
 The `azuread_managed_identity_auth` block supports the following arguments:
 

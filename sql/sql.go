@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
@@ -26,7 +27,7 @@ func GetFactory() model.ConnectorFactory {
 	return new(factory)
 }
 
-func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interface{}, error) {
+func (f factory) GetConnector(prefix string, data *schema.ResourceData, auth model.AzureAuth) (interface{}, error) {
 	if len(prefix) > 0 {
 		prefix = prefix + ".0."
 	}
@@ -54,13 +55,19 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 		}
 	}
 
-	if chainAuthList, ok := data.Get(prefix + "azuread_default_chain_auth").([]interface{}); ok && len(chainAuthList) > 0 && chainAuthList[0] != nil {
-		if useOidc, _ := chainAuthList[0].(map[string]interface{})["use_oidc"].(bool); useOidc {
+	if chainAuthList, ok := data.Get(prefix + "azuread_default_chain_auth").([]interface{}); ok && len(chainAuthList) > 0 {
+		useOidc := auth.UseOIDC
+		if chainAuth, ok := chainAuthList[0].(map[string]interface{}); ok && chainAuth["use_oidc"] == true {
+			useOidc = true
+		}
+		if useOidc {
 			connector.FedauthOIDC = &FedauthOIDC{
-				TenantID:          os.Getenv("ARM_TENANT_ID"),
-				ClientID:          os.Getenv("ARM_CLIENT_ID"),
-				OIDCToken:         os.Getenv("ARM_OIDC_TOKEN"),
-				OIDCTokenFilePath: os.Getenv("ARM_OIDC_TOKEN_FILE_PATH"),
+				TenantID:            auth.TenantID,
+				ClientID:            auth.ClientID,
+				OIDCToken:           auth.OIDCToken,
+				OIDCTokenFilePath:   auth.OIDCTokenFilePath,
+				ServiceConnectionID: auth.ServiceConnectionID,
+				SystemAccessToken:   auth.OIDCRequestToken,
 			}
 		}
 	}
@@ -103,6 +110,9 @@ type FedauthOIDC struct {
 	ClientID          string `json:"client_id,omitempty"`
 	OIDCToken         string `json:"oidc_token,omitempty"`
 	OIDCTokenFilePath string `json:"oidc_token_file_path,omitempty"`
+	// Azure DevOps Pipelines: used when neither OIDCToken nor OIDCTokenFilePath is set.
+	ServiceConnectionID string `json:"service_connection_id,omitempty"`
+	SystemAccessToken   string `json:"-"`
 }
 
 type FedauthMSI struct {
@@ -278,14 +288,32 @@ func (c *Connector) oidcGetAssertion(ctx context.Context) (string, error) {
 		}
 		return strings.TrimSpace(string(data)), nil
 	}
-	return "", fmt.Errorf("azuread_default_chain_auth with use_oidc=true requires ARM_OIDC_TOKEN or ARM_OIDC_TOKEN_FILE_PATH")
+	return "", fmt.Errorf("azuread_default_chain_auth with use_oidc=true requires oidc_token, oidc_token_file_path or oidc_azure_service_connection_id (or ARM_OIDC_TOKEN, ARM_OIDC_TOKEN_FILE_PATH, ARM_ADO_PIPELINE_SERVICE_CONNECTION_ID)")
+}
+
+// oidcCredential picks the federated credential: an explicit token or token file takes
+// precedence, then Azure DevOps Pipelines, which requests (and refreshes) the OIDC token
+// from the pipeline itself using SYSTEM_OIDCREQUESTURI and the system access token.
+func (c *Connector) oidcCredential() (azcore.TokenCredential, error) {
+	oidc := c.FedauthOIDC
+	if oidc.OIDCToken == "" && oidc.OIDCTokenFilePath == "" && oidc.ServiceConnectionID != "" {
+		if oidc.TenantID == "" || oidc.ClientID == "" {
+			return nil, fmt.Errorf("Azure DevOps OIDC requires the provider tenant_id and client_id (or ARM_TENANT_ID and ARM_CLIENT_ID)")
+		}
+		if oidc.SystemAccessToken == "" {
+			return nil, fmt.Errorf("Azure DevOps OIDC requires the provider oidc_request_token (or SYSTEM_ACCESSTOKEN / ARM_OIDC_REQUEST_TOKEN); map it in the pipeline step with `env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)`")
+		}
+		log.Printf("[DEBUG] mssql: using Azure DevOps Pipelines OIDC credential (service connection %s)", oidc.ServiceConnectionID)
+		return azidentity.NewAzurePipelinesCredential(oidc.TenantID, oidc.ClientID, oidc.ServiceConnectionID, oidc.SystemAccessToken, nil)
+	}
+	log.Printf("[DEBUG] mssql: using client assertion credential from oidc_token/oidc_token_file_path")
+	return azidentity.NewClientAssertionCredential(oidc.TenantID, oidc.ClientID, c.oidcGetAssertion, nil)
 }
 
 func (c *Connector) oidcTokenProvider() (string, error) {
 	const resourceID = "https://database.windows.net/"
 
-	oidc := c.FedauthOIDC
-	cred, err := azidentity.NewClientAssertionCredential(oidc.TenantID, oidc.ClientID, c.oidcGetAssertion, nil)
+	cred, err := c.oidcCredential()
 	if err != nil {
 		return "", fmt.Errorf("failed to create federated credential: %v", err)
 	}
