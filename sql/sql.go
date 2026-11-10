@@ -425,10 +425,13 @@ func (c *Connector) DatabaseExists(ctx context.Context, database string) (bool, 
 	var sqlErr mssql.Error
 	if err != nil && errors.As(err, &sqlErr) && sqlErr.Number == 18456 && c.Database != database {
 		// No access to master, e.g. an Azure AD identity with a user only in the target
-		// database. Connecting to the database itself shows that it exists.
+		// database. Connecting to the database itself shows that it exists. If that fails
+		// too, the error from master is kept.
 		target := *c
 		target.Database = database
-		err = target.QueryRowContext(ctx, cmd, scan, sql.Named("p1", database))
+		if targetErr := target.QueryRowContext(ctx, cmd, scan, sql.Named("p1", database)); targetErr == nil {
+			err = nil
+		}
 	}
 	if err != nil {
 		return false, errors.Wrapf(err, "error checking if database [%s] exists", database)
