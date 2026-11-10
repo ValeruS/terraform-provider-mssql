@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - With `debug = true`, Azure AD authentication events (which credential acquired the token, never the token itself) are
   written to the provider log
 
+### Fixed
+
+- Connection errors are returned immediately with the real cause (e.g. `missing environment variable AZURE_TENANT_ID`)
+  instead of `db connection failed after 30s timeout`; only transient network and server start-up errors are retried
+
 ## [0.7.3]
 
 ### Fixed

@@ -2,6 +2,10 @@ package sql
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -504,4 +508,23 @@ func writeTokenFile(t *testing.T, content string) string {
 		t.Fatalf("failed to write token file: %v", err)
 	}
 	return f
+}
+
+func TestIsTransient(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"dial error", fmt.Errorf("unable to open tcp connection: %w", &net.OpError{Op: "dial", Err: errors.New("connection refused")}), true},
+		{"eof", io.EOF, true},
+		{"database unavailable", mssql.Error{Number: 40613}, true},
+		{"login failed", mssql.Error{Number: 18456}, false},
+		{"missing credential", errors.New("missing environment variable AZURE_TENANT_ID"), false},
+	}
+	for _, tc := range cases {
+		if got := isTransient(tc.err); got != tc.want {
+			t.Errorf("%s: isTransient = %v, want %v", tc.name, got, tc.want)
+		}
+	}
 }

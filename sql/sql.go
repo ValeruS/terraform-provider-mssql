@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -339,42 +341,56 @@ func (c *Connector) oidcTokenProvider() (string, error) {
 	return token.Token, nil
 }
 
+// transientErrors are SQL Server error numbers worth retrying while the server or database starts.
+var transientErrors = map[int32]bool{
+	18401: true, // login failed: server is in script upgrade mode (container just started)
+	40197: true, // Azure SQL: service error processing the request
+	40501: true, // Azure SQL: service is busy
+	40613: true, // Azure SQL: database not currently available (e.g. serverless resume)
+	49918: true, // Azure SQL: not enough resources to process the request
+	49919: true, // Azure SQL: too many create or update operations in progress
+	49920: true, // Azure SQL: too many operations in progress
+}
+
+// connectLoop retries while the server is unreachable or starting. Any other error, such as a
+// missing credential or a failed login, is returned immediately.
 func connectLoop(connector driver.Connector, timeout time.Duration) (*sql.DB, error) {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 
 	timeoutExceeded := time.After(timeout)
+	lastErr := errors.New("no connection attempt made")
 	for {
 		select {
 		case <-timeoutExceeded:
-			return nil, fmt.Errorf("db connection failed after %s timeout", timeout)
+			return nil, fmt.Errorf("%w (retried for %s)", lastErr, timeout)
 
 		case <-ticker.C:
 			db, err := connect(connector)
 			if err == nil {
 				return db, nil
 			}
-			if strings.Contains(strings.ToLower(err.Error()), "login failed") {
+			if !isTransient(err) {
 				return nil, err
 			}
-			if strings.Contains(strings.ToLower(err.Error()), "login error") {
-				return nil, err
-			}
-			if strings.Contains(err.Error(), "error retrieving access token") {
-				return nil, err
-			}
-			if strings.Contains(err.Error(), "AuthenticationFailedError") {
-				return nil, err
-			}
-			if strings.Contains(err.Error(), "credential") {
-				return nil, err
-			}
-			if strings.Contains(err.Error(), "request failed") {
-				return nil, err
-			}
-			log.Println(errors.Wrap(err, "failed to connect to database"))
+			lastErr = err
+			log.Println(errors.Wrap(err, "failed to connect to database, retrying"))
 		}
 	}
+}
+
+func isTransient(err error) bool {
+	var netErr net.Error
+	var streamErr mssql.StreamError
+	var sqlErr mssql.Error
+	switch {
+	case errors.As(err, &netErr), errors.As(err, &streamErr),
+		errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
+		return true
+	case errors.As(err, &sqlErr):
+		return transientErrors[sqlErr.Number]
+	}
+	return false
 }
 
 func connect(connector driver.Connector) (*sql.DB, error) {
