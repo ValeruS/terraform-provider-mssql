@@ -221,6 +221,25 @@ func TestAccUser_AzureadChain_Database(t *testing.T) {
 	})
 }
 
+func TestAccUser_AzureadChainEnvironment_Database(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckUser(t, "database", "fedauth", map[string]interface{}{"database": "testdb", "username": "database_user_env", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]", "credential_type": "environment"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUserExists("mssql_user.database"),
+					testAccCheckDatabaseUserWorks("mssql_user.database", "database_user_env", "valueIsH8kd$¡"),
+					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_default_chain_auth.#", "1"),
+					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_default_chain_auth.0.credential_type", "environment"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccUser_AzureadMSI_Database(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -527,7 +546,7 @@ func testAccCheckUser(t *testing.T, name string, login string, data map[string]i
 			resource "mssql_login" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
-					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+					{{if eq .login "fedauth"}}azuread_default_chain_auth { {{ with .credential_type }}credential_type = "{{ . }}"{{ end }} }{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				login_name = "{{ .login_name }}"
 				password   = "{{ .login_password }}"
@@ -536,7 +555,7 @@ func testAccCheckUser(t *testing.T, name string, login string, data map[string]i
 			resource "mssql_user" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
-					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+					{{if eq .login "fedauth"}}azuread_default_chain_auth { {{ with .credential_type }}credential_type = "{{ . }}"{{ end }} }{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				{{ with .database }}database = "{{ . }}"{{ end }}
 				username = "{{ .username }}"

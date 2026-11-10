@@ -2,12 +2,15 @@ package sql
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	mssql "github.com/microsoft/go-mssqldb"
 )
 
 // newFederatedConnector is a helper that builds a Connector with a FedauthOIDC
@@ -178,6 +181,147 @@ func TestGetConnector_DefaultChainOIDC_False(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// GetConnector wiring: azuread_default_chain_auth with credential_type
+// ---------------------------------------------------------------------------
+
+func defaultChainConnector(t *testing.T, chainAuth map[string]interface{}) *Connector {
+	t.Helper()
+	res := serverSchemaResource()
+	raw := map[string]interface{}{
+		"server": []interface{}{
+			map[string]interface{}{
+				"host":                          "test.database.windows.net",
+				"port":                          "1433",
+				"azuread_default_chain_auth":    []interface{}{chainAuth},
+				"login":                         []interface{}{},
+				"azure_login":                   []interface{}{},
+				"azuread_managed_identity_auth": []interface{}{},
+			},
+		},
+	}
+
+	d := schema.TestResourceDataRaw(t, res.Schema, raw)
+
+	f := new(factory)
+	iface, err := f.GetConnector("server", d)
+	if err != nil {
+		t.Fatalf("GetConnector returned error: %v", err)
+	}
+	return iface.(*Connector)
+}
+
+func TestGetConnector_DefaultChainCredentialType(t *testing.T) {
+	tests := map[string]string{
+		"az_cli":              "ActiveDirectoryAzCli",
+		"azure_developer_cli": "ActiveDirectoryAzureDeveloperCli",
+		"azure_pipelines":     "ActiveDirectoryAzurePipelines",
+		"environment":         "ActiveDirectoryEnvironment",
+		"workload_identity":   "ActiveDirectoryWorkloadIdentity",
+	}
+	for credentialType, want := range tests {
+		c := defaultChainConnector(t, map[string]interface{}{"credential_type": credentialType})
+		if c.FedauthCredential != want {
+			t.Errorf("%s: FedauthCredential: got %q, want %q", credentialType, c.FedauthCredential, want)
+		}
+		if c.FedauthOIDC != nil {
+			t.Errorf("%s: FedauthOIDC should be nil", credentialType)
+		}
+	}
+}
+
+func TestGetConnector_DefaultChainEmptyBlockUsesActiveDirectoryDefault(t *testing.T) {
+	c := defaultChainConnector(t, map[string]interface{}{})
+	if c.FedauthOIDC != nil || c.FedauthCredential != "" {
+		t.Fatalf("empty block should not set OIDC or a credential type, got %+v", c)
+	}
+
+	conn, err := c.connector()
+	if err != nil {
+		t.Fatalf("connector returned error: %v", err)
+	}
+	if _, ok := conn.(*mssql.Connector); !ok {
+		t.Fatalf("expected *mssql.Connector, got %T", conn)
+	}
+}
+
+func TestGetConnector_DefaultChainOIDCIgnoresCredentialType(t *testing.T) {
+	c := defaultChainConnector(t, map[string]interface{}{"use_oidc": true, "credential_type": "az_cli"})
+	if c.FedauthOIDC == nil {
+		t.Error("FedauthOIDC should be set when use_oidc = true")
+	}
+	if c.FedauthCredential != "" {
+		t.Errorf("FedauthCredential should be empty when use_oidc = true, got %q", c.FedauthCredential)
+	}
+}
+
+func TestGetConnector_AzurePipelinesRequiresSystemAccessToken(t *testing.T) {
+	t.Setenv("AZURESUBSCRIPTION_CLIENT_ID", "env-client")
+	t.Setenv("AZURESUBSCRIPTION_TENANT_ID", "env-tenant")
+	t.Setenv("AZURESUBSCRIPTION_SERVICE_CONNECTION_ID", "env-connection")
+	t.Setenv("SYSTEM_ACCESSTOKEN", "")
+	t.Setenv("ARM_OIDC_REQUEST_TOKEN", "")
+
+	c := &Connector{Host: "test.database.windows.net", Port: "1433", FedauthCredential: "ActiveDirectoryAzurePipelines"}
+	if _, err := c.connector(); err == nil || !strings.Contains(err.Error(), "SYSTEM_ACCESSTOKEN") {
+		t.Errorf("expected SYSTEM_ACCESSTOKEN error, got %v", err)
+	}
+
+	t.Setenv("SYSTEM_ACCESSTOKEN", "env-token")
+	if _, err := c.connector(); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestGetConnector_SetAzurePipelinesParams(t *testing.T) {
+	t.Setenv("ARM_TENANT_ID", "env-tenant")
+	t.Setenv("ARM_CLIENT_ID", "env-client")
+	t.Setenv("ARM_OIDC_AZURE_SERVICE_CONNECTION_ID", "env-connection")
+	t.Setenv("ARM_OIDC_REQUEST_TOKEN", "env-token")
+
+	query := url.Values{}
+	setAzurePipelinesParams(query)
+
+	want := map[string]string{
+		"user id":             "env-client@env-tenant",
+		"serviceconnectionid": "env-connection",
+		"systemtoken":         "env-token",
+	}
+	for k, v := range want {
+		if got := query.Get(k); got != v {
+			t.Errorf("%s: got %q, want %q", k, got, v)
+		}
+	}
+}
+
+func TestGetConnector_SetAzurePipelinesParams_Incomplete(t *testing.T) {
+	t.Setenv("ARM_CLIENT_ID", "env-client")
+	t.Setenv("ARM_OIDC_AZURE_SERVICE_CONNECTION_ID", "")
+	t.Setenv("ARM_OIDC_REQUEST_TOKEN", "env-token")
+
+	query := url.Values{}
+	setAzurePipelinesParams(query)
+	if len(query) != 0 {
+		t.Errorf("expected no params when ARM_* variables are incomplete, got %v", query)
+	}
+}
+
+func TestGetConnector_AzurePipelinesTerraformTaskEnv(t *testing.T) {
+	t.Setenv("AZURESUBSCRIPTION_CLIENT_ID", "")
+	t.Setenv("AZURESUBSCRIPTION_TENANT_ID", "")
+	t.Setenv("AZURESUBSCRIPTION_SERVICE_CONNECTION_ID", "")
+	t.Setenv("SYSTEM_ACCESSTOKEN", "")
+	t.Setenv("ARM_TENANT_ID", "env-tenant")
+	t.Setenv("ARM_CLIENT_ID", "env-client")
+	t.Setenv("ARM_OIDC_AZURE_SERVICE_CONNECTION_ID", "env-connection")
+	t.Setenv("ARM_OIDC_REQUEST_TOKEN", "env-token")
+
+	c := &Connector{Host: "test.database.windows.net", Port: "1433", FedauthCredential: "ActiveDirectoryAzurePipelines"}
+	if _, err := c.connector(); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // GetConnector wiring: login
 // ---------------------------------------------------------------------------
 
@@ -336,7 +480,8 @@ func serverSchemaResource() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"use_oidc": {Type: schema.TypeBool, Optional: true, Default: false},
+									"use_oidc":        {Type: schema.TypeBool, Optional: true, Default: false},
+									"credential_type": {Type: schema.TypeString, Optional: true},
 								},
 							},
 						},

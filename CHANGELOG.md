@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0]
+
+### Added
+
+- `credential_type` argument in the `azuread_default_chain_auth` block to select the credential (`az_cli`,
+  `azure_developer_cli`, `azure_pipelines`, `environment`, `workload_identity`); defaults to `ActiveDirectoryDefault` when omitted.
+  `azure_pipelines` works with both `TerraformTask@5` (`ARM_*` variables) and `AzureCLI@2` / `AzurePowerShell@5`
+- With `debug = true`, Azure AD authentication events (which credential acquired the token, never the token itself) are
+  written to the provider log
+
 ## [0.7.3]
 
 ### Fixed

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 const DefaultPort = "1433"
@@ -92,9 +93,22 @@ func getServerSchema(prefix string) map[string]*schema.Schema {
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"use_oidc": {
-						Type:     schema.TypeBool,
-						Optional: true,
-						Default:  false,
+						Type:          schema.TypeBool,
+						Optional:      true,
+						Default:       false,
+						ConflictsWith: []string{prefix + "azuread_default_chain_auth.0.credential_type"},
+					},
+					"credential_type": {
+						Type:          schema.TypeString,
+						Optional:      true,
+						ConflictsWith: []string{prefix + "azuread_default_chain_auth.0.use_oidc"},
+						ValidateFunc: validation.StringInSlice([]string{
+							"az_cli",
+							"azure_developer_cli",
+							"azure_pipelines",
+							"environment",
+							"workload_identity",
+						}, false),
 					},
 				},
 			},

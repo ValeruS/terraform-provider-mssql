@@ -55,13 +55,16 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 	}
 
 	if chainAuthList, ok := data.Get(prefix + "azuread_default_chain_auth").([]interface{}); ok && len(chainAuthList) > 0 && chainAuthList[0] != nil {
-		if useOidc, _ := chainAuthList[0].(map[string]interface{})["use_oidc"].(bool); useOidc {
+		chainAuth := chainAuthList[0].(map[string]interface{})
+		if useOidc, _ := chainAuth["use_oidc"].(bool); useOidc {
 			connector.FedauthOIDC = &FedauthOIDC{
 				TenantID:          os.Getenv("ARM_TENANT_ID"),
 				ClientID:          os.Getenv("ARM_CLIENT_ID"),
 				OIDCToken:         os.Getenv("ARM_OIDC_TOKEN"),
 				OIDCTokenFilePath: os.Getenv("ARM_OIDC_TOKEN_FILE_PATH"),
 			}
+		} else if credentialType, _ := chainAuth["credential_type"].(string); credentialType != "" {
+			connector.FedauthCredential = credentialTypes[credentialType]
 		}
 	}
 
@@ -75,6 +78,15 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 	return connector, nil
 }
 
+// credentialTypes maps azuread_default_chain_auth.credential_type to the go-mssqldb fedauth value.
+var credentialTypes = map[string]string{
+	"az_cli":              azuread.ActiveDirectoryAzCli,
+	"azure_developer_cli": azuread.ActiveDirectoryAzureDeveloperCli,
+	"azure_pipelines":     azuread.ActiveDirectoryAzurePipelines,
+	"environment":         azuread.ActiveDirectoryEnvironment,
+	"workload_identity":   azuread.ActiveDirectoryWorkloadIdentity,
+}
+
 type Connector struct {
 	Host        string `json:"host"`
 	Port        string `json:"port"`
@@ -83,8 +95,10 @@ type Connector struct {
 	AzureLogin  *AzureLogin
 	FedauthOIDC *FedauthOIDC
 	FedauthMSI  *FedauthMSI
-	Timeout     time.Duration `json:"timeout,omitempty"`
-	Token       string
+	// FedauthCredential is the fedauth value used instead of ActiveDirectoryDefault, if set.
+	FedauthCredential string
+	Timeout           time.Duration `json:"timeout,omitempty"`
+	Token             string
 }
 
 type LoginUser struct {
@@ -221,6 +235,11 @@ func (c *Connector) connector() (driver.Connector, error) {
 		if c.FedauthMSI.UserID != "" {
 			query.Set("user id", c.FedauthMSI.UserID)
 		}
+	} else if c.FedauthCredential != "" {
+		query.Set("fedauth", c.FedauthCredential)
+		if c.FedauthCredential == azuread.ActiveDirectoryAzurePipelines {
+			setAzurePipelinesParams(query)
+		}
 	} else {
 		query.Set("fedauth", "ActiveDirectoryDefault")
 	}
@@ -230,6 +249,26 @@ func (c *Connector) connector() (driver.Connector, error) {
 		RawQuery: query.Encode(),
 	}).String()
 	return azuread.NewConnector(connectionString)
+}
+
+// setAzurePipelinesParams passes the variables set by TerraformTask@5 (workload identity
+// federation with ID token refresh) to go-mssqldb. When they are not all set, the driver
+// falls back to AZURESUBSCRIPTION_* and SYSTEM_ACCESSTOKEN, as set by AzureCLI@2.
+func setAzurePipelinesParams(query url.Values) {
+	clientID := os.Getenv("ARM_CLIENT_ID")
+	serviceConnectionID := os.Getenv("ARM_OIDC_AZURE_SERVICE_CONNECTION_ID")
+	systemToken := os.Getenv("ARM_OIDC_REQUEST_TOKEN")
+	if clientID == "" || serviceConnectionID == "" || systemToken == "" {
+		return
+	}
+
+	userID := clientID
+	if tenantID := os.Getenv("ARM_TENANT_ID"); tenantID != "" {
+		userID += "@" + tenantID
+	}
+	query.Set("user id", userID)
+	query.Set("serviceconnectionid", serviceConnectionID)
+	query.Set("systemtoken", systemToken)
 }
 
 func (c *Connector) userPassword() *url.Userinfo {
