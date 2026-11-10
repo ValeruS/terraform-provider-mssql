@@ -125,20 +125,6 @@ type FedauthMSI struct {
 	UserID string `json:"user_id,omitempty"`
 }
 
-func (c *Connector) PingContext(ctx context.Context) error {
-	db, err := c.db()
-	if err != nil {
-		return err
-	}
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return errors.Wrap(err, "In ping")
-	}
-
-	return nil
-}
-
 // Execute an SQL statement and ignore the results
 func (c *Connector) ExecContext(ctx context.Context, command string, args ...interface{}) error {
 	db, err := c.db()
