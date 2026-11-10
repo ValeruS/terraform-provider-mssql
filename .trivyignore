@@ -1,0 +1,3 @@
+# golang.org/x/crypto/openpgp is not imported (only the ProtonMail fork is);
+# govulncheck reports it as not reachable. Remove once x/crypto v0.59.0 is tagged.
+GO-2026-5932 exp:2027-01-31
