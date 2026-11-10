@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - With `debug = true`, Azure AD authentication events (which credential acquired the token, never the token itself) are
   written to the provider log
 
+### Changed
+
+- Upgraded to Go 1.26 and updated Go module dependencies (`go-mssqldb` v1.11.2, `azidentity` v1.15.0, `azcore` v1.24.0)
+
 ### Fixed
 
 - Connection errors are returned immediately with the real cause (e.g. `missing environment variable AZURE_TENANT_ID`)
