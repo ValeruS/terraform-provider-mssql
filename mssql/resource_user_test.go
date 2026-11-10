@@ -240,6 +240,25 @@ func TestAccUser_AzureadChainEnvironment_Database(t *testing.T) {
 	})
 }
 
+// Run locally only: needs an `az login` identity that is db_owner in testdb (no user in master is required).
+// func TestAccUser_AzureadChainAzCli_Database(t *testing.T) {
+// 	resource.Test(t, resource.TestCase{
+// 		PreCheck:          func() { testAccPreCheck(t) },
+// 		ProviderFactories: testAccProviders,
+// 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: testAccCheckUser(t, "database", "fedauth", map[string]interface{}{"database": "testdb", "username": "database_user_azcli", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]", "credential_type": "az_cli"}),
+// 				Check: resource.ComposeTestCheckFunc(
+// 					testAccCheckUserExists("mssql_user.database"),
+// 					testAccCheckDatabaseUserWorks("mssql_user.database", "database_user_azcli", "valueIsH8kd$¡"),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_default_chain_auth.0.credential_type", "az_cli"),
+// 				),
+// 			},
+// 		},
+// 	})
+// }
+
 func TestAccUser_AzureadMSI_Database(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
