@@ -418,9 +418,18 @@ func (c *Connector) DatabaseExists(ctx context.Context, database string) (bool, 
 		WHERE name = @p1
 	`
 	var count int
-	err := c.QueryRowContext(ctx, cmd, func(r *sql.Row) error {
+	scan := func(r *sql.Row) error {
 		return r.Scan(&count)
-	}, sql.Named("p1", database))
+	}
+	err := c.QueryRowContext(ctx, cmd, scan, sql.Named("p1", database))
+	var sqlErr mssql.Error
+	if err != nil && errors.As(err, &sqlErr) && sqlErr.Number == 18456 && c.Database != database {
+		// No access to master, e.g. an Azure AD identity with a user only in the target
+		// database. Connecting to the database itself shows that it exists.
+		target := *c
+		target.Database = database
+		err = target.QueryRowContext(ctx, cmd, scan, sql.Named("p1", database))
+	}
 	if err != nil {
 		return false, errors.Wrapf(err, "error checking if database [%s] exists", database)
 	}

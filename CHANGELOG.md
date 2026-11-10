@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Connection errors are returned immediately with the real cause (e.g. `missing environment variable AZURE_TENANT_ID`)
   instead of `db connection failed after 30s timeout`; only transient network and server start-up errors are retried
+- Resources no longer require access to `master` to check that the database exists, so an Azure AD identity with a user
+  only in the target database can manage it
 
 ## [0.7.3]
 
