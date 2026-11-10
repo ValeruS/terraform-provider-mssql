@@ -2,6 +2,8 @@
 
 The `mssql_server_role` resource allows you to create and manage server-level roles in SQL Server.
 
+-> **Azure SQL Database note:** User-defined server roles are not supported on Azure SQL Database, so this resource returns `Statement 'CREATE SERVER ROLE' is not supported in this version of SQL Server` there. Use it with SQL Server or Azure SQL Managed Instance. The Azure AD authentication blocks below apply to Azure SQL Managed Instance and to SQL Server with Microsoft Entra authentication enabled.
+
 ## Example Usage
 
 ### Basic usage

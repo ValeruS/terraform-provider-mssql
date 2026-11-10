@@ -2,6 +2,8 @@
 
 The `mssql_server_role` data source obtains information about a server-level role in SQL Server.
 
+-> **Azure SQL Database note:** Azure SQL Database has no user-defined server roles. Use this data source with SQL Server or Azure SQL Managed Instance. The Azure AD authentication blocks below apply to Azure SQL Managed Instance and to SQL Server with Microsoft Entra authentication enabled.
+
 ## Example Usage
 
 ```hcl
