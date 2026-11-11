@@ -7,14 +7,18 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"text/template"
 	"time"
 
+	azlog "github.com/Azure/azure-sdk-for-go/sdk/azcore/log"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/ValeruS/terraform-provider-mssql/sql"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/rs/zerolog"
 )
 
 var runLocalAccTests bool
@@ -256,5 +260,24 @@ func testAccImportStateId(resource string, azure bool) func(state *terraform.Sta
 			return "", fmt.Errorf("no record ID is set")
 		}
 		return rs.Primary.ID + "?azure=" + strconv.FormatBool(azure), nil
+	}
+}
+
+func TestSetAzureLogListener(t *testing.T) {
+	var buf bytes.Buffer
+	logger := zerolog.New(&buf).Level(zerolog.DebugLevel)
+	setAzureLogListener(&logger)
+	t.Cleanup(func() { azlog.SetListener(nil) })
+
+	// Creating a managed identity credential writes an Authentication event without any network call.
+	if _, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
+		ID: azidentity.ClientID("test-client"),
+	}); err != nil {
+		t.Fatalf("NewManagedIdentityCredential returned error: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, `"event":"Authentication"`) || !strings.Contains(out, "ManagedIdentityCredential") {
+		t.Errorf("expected an Authentication event in the provider log, got %q", out)
 	}
 }

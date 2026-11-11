@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0]
+
+### Added
+
+- `credential_type` argument in the `azuread_default_chain_auth` block to select the credential (`az_cli`,
+  `azure_developer_cli`, `azure_pipelines`, `environment`, `workload_identity`); defaults to `ActiveDirectoryDefault` when omitted.
+  `azure_pipelines` works with both `TerraformTask@5` (`ARM_*` variables) and `AzureCLI@2` / `AzurePowerShell@5`
+- With `debug = true`, Azure AD authentication events (which credential acquired the token, never the token itself) are
+  written to the provider log
+
+### Changed
+
+- Upgraded to Go 1.26 and updated Go module dependencies (`go-mssqldb` v1.11.2, `azidentity` v1.15.0, `azcore` v1.24.0)
+
+### Fixed
+
+- Connection errors are returned immediately with the real cause (e.g. `missing environment variable AZURE_TENANT_ID`)
+  instead of `db connection failed after 30s timeout`; only transient network and server start-up errors are retried
+- Resources no longer require access to `master` to check that the database exists, so an Azure AD identity with a user
+  only in the target database can manage it
+
 ## [0.7.3]
 
 ### Fixed

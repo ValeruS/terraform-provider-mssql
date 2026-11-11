@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -55,13 +57,16 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 	}
 
 	if chainAuthList, ok := data.Get(prefix + "azuread_default_chain_auth").([]interface{}); ok && len(chainAuthList) > 0 && chainAuthList[0] != nil {
-		if useOidc, _ := chainAuthList[0].(map[string]interface{})["use_oidc"].(bool); useOidc {
+		chainAuth := chainAuthList[0].(map[string]interface{})
+		if useOidc, _ := chainAuth["use_oidc"].(bool); useOidc {
 			connector.FedauthOIDC = &FedauthOIDC{
 				TenantID:          os.Getenv("ARM_TENANT_ID"),
 				ClientID:          os.Getenv("ARM_CLIENT_ID"),
 				OIDCToken:         os.Getenv("ARM_OIDC_TOKEN"),
 				OIDCTokenFilePath: os.Getenv("ARM_OIDC_TOKEN_FILE_PATH"),
 			}
+		} else if credentialType, _ := chainAuth["credential_type"].(string); credentialType != "" {
+			connector.FedauthCredential = credentialTypes[credentialType]
 		}
 	}
 
@@ -75,6 +80,15 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 	return connector, nil
 }
 
+// credentialTypes maps azuread_default_chain_auth.credential_type to the go-mssqldb fedauth value.
+var credentialTypes = map[string]string{
+	"az_cli":              azuread.ActiveDirectoryAzCli,
+	"azure_developer_cli": azuread.ActiveDirectoryAzureDeveloperCli,
+	"azure_pipelines":     azuread.ActiveDirectoryAzurePipelines,
+	"environment":         azuread.ActiveDirectoryEnvironment,
+	"workload_identity":   azuread.ActiveDirectoryWorkloadIdentity,
+}
+
 type Connector struct {
 	Host        string `json:"host"`
 	Port        string `json:"port"`
@@ -83,8 +97,10 @@ type Connector struct {
 	AzureLogin  *AzureLogin
 	FedauthOIDC *FedauthOIDC
 	FedauthMSI  *FedauthMSI
-	Timeout     time.Duration `json:"timeout,omitempty"`
-	Token       string
+	// FedauthCredential is the fedauth value used instead of ActiveDirectoryDefault, if set.
+	FedauthCredential string
+	Timeout           time.Duration `json:"timeout,omitempty"`
+	Token             string
 }
 
 type LoginUser struct {
@@ -107,20 +123,6 @@ type FedauthOIDC struct {
 
 type FedauthMSI struct {
 	UserID string `json:"user_id,omitempty"`
-}
-
-func (c *Connector) PingContext(ctx context.Context) error {
-	db, err := c.db()
-	if err != nil {
-		return err
-	}
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return errors.Wrap(err, "In ping")
-	}
-
-	return nil
 }
 
 // Execute an SQL statement and ignore the results
@@ -221,6 +223,11 @@ func (c *Connector) connector() (driver.Connector, error) {
 		if c.FedauthMSI.UserID != "" {
 			query.Set("user id", c.FedauthMSI.UserID)
 		}
+	} else if c.FedauthCredential != "" {
+		query.Set("fedauth", c.FedauthCredential)
+		if c.FedauthCredential == azuread.ActiveDirectoryAzurePipelines {
+			setAzurePipelinesParams(query)
+		}
 	} else {
 		query.Set("fedauth", "ActiveDirectoryDefault")
 	}
@@ -230,6 +237,26 @@ func (c *Connector) connector() (driver.Connector, error) {
 		RawQuery: query.Encode(),
 	}).String()
 	return azuread.NewConnector(connectionString)
+}
+
+// setAzurePipelinesParams passes the variables set by TerraformTask@5 (workload identity
+// federation with ID token refresh) to go-mssqldb. When they are not all set, the driver
+// falls back to AZURESUBSCRIPTION_* and SYSTEM_ACCESSTOKEN, as set by AzureCLI@2.
+func setAzurePipelinesParams(query url.Values) {
+	clientID := os.Getenv("ARM_CLIENT_ID")
+	serviceConnectionID := os.Getenv("ARM_OIDC_AZURE_SERVICE_CONNECTION_ID")
+	systemToken := os.Getenv("ARM_OIDC_REQUEST_TOKEN")
+	if clientID == "" || serviceConnectionID == "" || systemToken == "" {
+		return
+	}
+
+	userID := clientID
+	if tenantID := os.Getenv("ARM_TENANT_ID"); tenantID != "" {
+		userID += "@" + tenantID
+	}
+	query.Set("user id", userID)
+	query.Set("serviceconnectionid", serviceConnectionID)
+	query.Set("systemtoken", systemToken)
 }
 
 func (c *Connector) userPassword() *url.Userinfo {
@@ -300,42 +327,56 @@ func (c *Connector) oidcTokenProvider() (string, error) {
 	return token.Token, nil
 }
 
+// transientErrors are SQL Server error numbers worth retrying while the server or database starts.
+var transientErrors = map[int32]bool{
+	18401: true, // login failed: server is in script upgrade mode (container just started)
+	40197: true, // Azure SQL: service error processing the request
+	40501: true, // Azure SQL: service is busy
+	40613: true, // Azure SQL: database not currently available (e.g. serverless resume)
+	49918: true, // Azure SQL: not enough resources to process the request
+	49919: true, // Azure SQL: too many create or update operations in progress
+	49920: true, // Azure SQL: too many operations in progress
+}
+
+// connectLoop retries while the server is unreachable or starting. Any other error, such as a
+// missing credential or a failed login, is returned immediately.
 func connectLoop(connector driver.Connector, timeout time.Duration) (*sql.DB, error) {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 
 	timeoutExceeded := time.After(timeout)
+	lastErr := errors.New("no connection attempt made")
 	for {
 		select {
 		case <-timeoutExceeded:
-			return nil, fmt.Errorf("db connection failed after %s timeout", timeout)
+			return nil, fmt.Errorf("%w (retried for %s)", lastErr, timeout)
 
 		case <-ticker.C:
 			db, err := connect(connector)
 			if err == nil {
 				return db, nil
 			}
-			if strings.Contains(strings.ToLower(err.Error()), "login failed") {
+			if !isTransient(err) {
 				return nil, err
 			}
-			if strings.Contains(strings.ToLower(err.Error()), "login error") {
-				return nil, err
-			}
-			if strings.Contains(err.Error(), "error retrieving access token") {
-				return nil, err
-			}
-			if strings.Contains(err.Error(), "AuthenticationFailedError") {
-				return nil, err
-			}
-			if strings.Contains(err.Error(), "credential") {
-				return nil, err
-			}
-			if strings.Contains(err.Error(), "request failed") {
-				return nil, err
-			}
-			log.Println(errors.Wrap(err, "failed to connect to database"))
+			lastErr = err
+			log.Println(errors.Wrap(err, "failed to connect to database, retrying"))
 		}
 	}
+}
+
+func isTransient(err error) bool {
+	var netErr net.Error
+	var streamErr mssql.StreamError
+	var sqlErr mssql.Error
+	switch {
+	case errors.As(err, &netErr), errors.As(err, &streamErr),
+		errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
+		return true
+	case errors.As(err, &sqlErr):
+		return transientErrors[sqlErr.Number]
+	}
+	return false
 }
 
 func connect(connector driver.Connector) (*sql.DB, error) {
@@ -377,9 +418,21 @@ func (c *Connector) DatabaseExists(ctx context.Context, database string) (bool, 
 		WHERE name = @p1
 	`
 	var count int
-	err := c.QueryRowContext(ctx, cmd, func(r *sql.Row) error {
+	scan := func(r *sql.Row) error {
 		return r.Scan(&count)
-	}, sql.Named("p1", database))
+	}
+	err := c.QueryRowContext(ctx, cmd, scan, sql.Named("p1", database))
+	var sqlErr mssql.Error
+	if err != nil && errors.As(err, &sqlErr) && sqlErr.Number == 18456 && c.Database != database {
+		// No access to master, e.g. an Azure AD identity with a user only in the target
+		// database. Connecting to the database itself shows that it exists. If that fails
+		// too, the error from master is kept.
+		target := *c
+		target.Database = database
+		if targetErr := target.QueryRowContext(ctx, cmd, scan, sql.Named("p1", database)); targetErr == nil {
+			err = nil
+		}
+	}
 	if err != nil {
 		return false, errors.Wrapf(err, "error checking if database [%s] exists", database)
 	}

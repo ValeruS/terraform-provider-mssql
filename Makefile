@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-VERSION	= 0.7.3
+VERSION	= 0.8.0
 
 TERRAFORM	  = terraform
 TERRAFORM_VERSION = "~> 1.5"
@@ -93,3 +93,5 @@ azure-create:
 
 azure-destroy:
 	cd test-fixtures/all && TERRAFORM_VERSION=$(TERRAFORM_VERSION) ${TERRAFORM} destroy -auto-approve
+
+-include local.mk

@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	azlog "github.com/Azure/azure-sdk-for-go/sdk/azcore/log"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/ValeruS/terraform-provider-mssql/sql"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -81,6 +83,9 @@ func Provider(factory model.ConnectorFactory) *schema.Provider {
 func providerConfigure(ctx context.Context, data *schema.ResourceData, factory model.ConnectorFactory) (model.Provider, diag.Diagnostics) {
 	isDebug := data.Get("debug").(bool)
 	logger := newLogger(isDebug)
+	if isDebug {
+		setAzureLogListener(logger)
+	}
 
 	logger.Info().Msg("Created provider")
 
@@ -112,4 +117,13 @@ func newLogger(isDebug bool) *zerolog.Logger {
 	}
 	logger := zerolog.New(writer).Level(logLevel).With().Timestamp().Logger()
 	return &logger
+}
+
+// setAzureLogListener forwards Azure SDK authentication events to the provider log, e.g. which
+// credential in the default chain returned the token. Tokens themselves are never logged.
+func setAzureLogListener(logger *zerolog.Logger) {
+	azlog.SetEvents(azidentity.EventAuthentication)
+	azlog.SetListener(func(event azlog.Event, msg string) {
+		logger.Debug().Str("event", string(event)).Msg(msg)
+	})
 }
