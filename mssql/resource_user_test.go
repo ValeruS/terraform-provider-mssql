@@ -259,26 +259,27 @@ func TestAccUser_AzureadChainEnvironment_Database(t *testing.T) {
 // 	})
 // }
 
-func TestAccUser_AzureadMSI_Database(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
-		Steps: []resource.TestStep{
-			{
-				Config: testAccCheckUser(t, "database", "msi", map[string]interface{}{"database": "testdb", "username": "database_user", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckUserExists("mssql_user.database"),
-					testAccCheckDatabaseUserWorks("mssql_user.database", "database_user", "valueIsH8kd$¡"),
-					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azure_login.#", "0"),
-					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_default_chain_auth.#", "0"),
-					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_managed_identity_auth.#", "1"),
-					resource.TestCheckResourceAttr("mssql_user.database", "server.0.login.#", "0"),
-				),
-			},
-		},
-	})
-}
+// Requires a managed identity (Azure VM, App Service, AKS, ...) with access to the test database
+// func TestAccUser_AzureadMSI_Database(t *testing.T) {
+// 	resource.Test(t, resource.TestCase{
+// 		PreCheck:          func() { testAccPreCheck(t) },
+// 		ProviderFactories: testAccProviders,
+// 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: testAccCheckUser(t, "database", "msi", map[string]interface{}{"database": "testdb", "username": "database_user", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]"}),
+// 				Check: resource.ComposeTestCheckFunc(
+// 					testAccCheckUserExists("mssql_user.database"),
+// 					testAccCheckDatabaseUserWorks("mssql_user.database", "database_user", "valueIsH8kd$¡"),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azure_login.#", "0"),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_default_chain_auth.#", "0"),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_managed_identity_auth.#", "1"),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.login.#", "0"),
+// 				),
+// 			},
+// 		},
+// 	})
+// }
 
 func TestAccUser_Azure_External(t *testing.T) {
 	tenantId := os.Getenv("MSSQL_TENANT_ID")
@@ -344,30 +345,31 @@ func TestAccUser_AzureadChain_External(t *testing.T) {
 	})
 }
 
-func TestAccUser_AzureadMSI_External(t *testing.T) {
-	tenantId := os.Getenv("MSSQL_TENANT_ID")
-	clientId := os.Getenv("TF_ACC_AZURE_USER_CLIENT_ID")
-	clientUser := os.Getenv("TF_ACC_AZURE_USER_CLIENT_USER")
-	clientSecret := os.Getenv("TF_ACC_AZURE_USER_CLIENT_SECRET")
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviders,
-		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
-		Steps: []resource.TestStep{
-			{
-				Config: testAccCheckUser(t, "database", "msi", map[string]interface{}{"database": "testdb", "username": clientUser, "roles": "[\"db_owner\"]"}),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckUserExists("mssql_user.database"),
-					testAccCheckExternalUserWorks("mssql_user.database", tenantId, clientId, clientSecret),
-					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azure_login.#", "0"),
-					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_default_chain_auth.#", "0"),
-					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_managed_identity_auth.#", "1"),
-					resource.TestCheckResourceAttr("mssql_user.database", "server.0.login.#", "0"),
-				),
-			},
-		},
-	})
-}
+// Requires a managed identity (Azure VM, App Service, AKS, ...) with access to the test database
+// func TestAccUser_AzureadMSI_External(t *testing.T) {
+// 	tenantId := os.Getenv("MSSQL_TENANT_ID")
+// 	clientId := os.Getenv("TF_ACC_AZURE_USER_CLIENT_ID")
+// 	clientUser := os.Getenv("TF_ACC_AZURE_USER_CLIENT_USER")
+// 	clientSecret := os.Getenv("TF_ACC_AZURE_USER_CLIENT_SECRET")
+// 	resource.Test(t, resource.TestCase{
+// 		PreCheck:          func() { testAccPreCheck(t) },
+// 		ProviderFactories: testAccProviders,
+// 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: testAccCheckUser(t, "database", "msi", map[string]interface{}{"database": "testdb", "username": clientUser, "roles": "[\"db_owner\"]"}),
+// 				Check: resource.ComposeTestCheckFunc(
+// 					testAccCheckUserExists("mssql_user.database"),
+// 					testAccCheckExternalUserWorks("mssql_user.database", tenantId, clientId, clientSecret),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azure_login.#", "0"),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_default_chain_auth.#", "0"),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.azuread_managed_identity_auth.#", "1"),
+// 					resource.TestCheckResourceAttr("mssql_user.database", "server.0.login.#", "0"),
+// 				),
+// 			},
+// 		},
+// 	})
+// }
 
 func TestAccUser_Local_Update_DefaultSchema(t *testing.T) {
 	resource.Test(t, resource.TestCase{
