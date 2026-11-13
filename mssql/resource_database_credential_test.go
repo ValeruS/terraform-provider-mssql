@@ -3,6 +3,7 @@ package mssql
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -86,6 +87,66 @@ func TestAccDatabaseCredential_Azure_Basic_update(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseCredential_Azure_SecretWo(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseCredemtialDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckDatabaseCredential(t, "wo", "azure", map[string]interface{}{"database": "testdb", "credential_name": "test_scoped_cred_wo", "identity_name": "test_identity_name_1", "secret_wo": "V3ryS3cretP@asswd", "secret_wo_version": 1, "password": "V3ryS3cretP@asswd!Key"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseCredemtialExists("mssql_database_credential.wo"),
+					resource.TestCheckResourceAttr("mssql_database_credential.wo", "identity_name", "test_identity_name_1"),
+					resource.TestCheckNoResourceAttr("mssql_database_credential.wo", "secret"),
+					resource.TestCheckNoResourceAttr("mssql_database_credential.wo", "secret_wo"),
+					resource.TestCheckResourceAttr("mssql_database_credential.wo", "secret_wo_version", "1"),
+				),
+			},
+			{
+				// Changing identity_name without bumping the version keeps the existing secret
+				Config: testAccCheckDatabaseCredential(t, "wo", "azure", map[string]interface{}{"database": "testdb", "credential_name": "test_scoped_cred_wo", "identity_name": "test_identity_name_2", "secret_wo": "V3ryS3cretP@asswd", "secret_wo_version": 1, "password": "V3ryS3cretP@asswd!Key"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseCredemtialExists("mssql_database_credential.wo"),
+					resource.TestCheckResourceAttr("mssql_database_credential.wo", "identity_name", "test_identity_name_2"),
+					resource.TestCheckNoResourceAttr("mssql_database_credential.wo", "secret_wo"),
+				),
+			},
+			{
+				Config: testAccCheckDatabaseCredential(t, "wo", "azure", map[string]interface{}{"database": "testdb", "credential_name": "test_scoped_cred_wo", "identity_name": "test_identity_name_2", "secret_wo": "V3ryS3cretP@asswdUpdated123", "secret_wo_version": 2, "password": "V3ryS3cretP@asswd!Key"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseCredemtialExists("mssql_database_credential.wo"),
+					resource.TestCheckNoResourceAttr("mssql_database_credential.wo", "secret"),
+					resource.TestCheckNoResourceAttr("mssql_database_credential.wo", "secret_wo"),
+					resource.TestCheckResourceAttr("mssql_database_credential.wo", "secret_wo_version", "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseCredential_Local_SecretWo_Validate(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccCheckDatabaseCredential(t, "wo_validate", "login", map[string]interface{}{"database": "master", "credential_name": "wo_validate", "identity_name": "wo_validate", "secret": "V3ryS3cretP@asswd", "secret_wo": "V3ryS3cretP@asswd", "secret_wo_version": 1, "password": "V3ryS3cretP@asswd!Key"}),
+				ExpectError: regexp.MustCompile(`"secret_wo": conflicts with secret`),
+			},
+			{
+				Config:      testAccCheckDatabaseCredential(t, "wo_validate", "login", map[string]interface{}{"database": "master", "credential_name": "wo_validate", "identity_name": "wo_validate", "secret_wo": "V3ryS3cretP@asswd", "password": "V3ryS3cretP@asswd!Key"}),
+				ExpectError: regexp.MustCompile(`all of .secret_wo,secret_wo_version. must be\s+specified`),
+			},
+			{
+				Config:      testAccCheckDatabaseCredential(t, "wo_validate", "login", map[string]interface{}{"database": "master", "credential_name": "wo_validate", "identity_name": "wo_validate", "secret_wo_version": 1, "password": "V3ryS3cretP@asswd!Key"}),
+				ExpectError: regexp.MustCompile(`all of .secret_wo,secret_wo_version. must be\s+specified`),
+			},
+		},
+	})
+}
+
 func testAccCheckDatabaseCredential(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `resource "mssql_database_masterkey" "{{ .name }}" {
 				server {
@@ -104,6 +165,8 @@ func testAccCheckDatabaseCredential(t *testing.T, name string, login string, dat
 				credential_name = "{{ .credential_name }}"
 				identity_name = "{{ .identity_name }}"
 				{{ with .secret }}secret = "{{ . }}"{{ end }}
+				{{ with .secret_wo }}secret_wo = "{{ . }}"{{ end }}
+				{{ with .secret_wo_version }}secret_wo_version = {{ . }}{{ end }}
 				depends_on = [mssql_database_masterkey.{{ .name }}]
 			}`
 

@@ -150,6 +150,109 @@ func TestAccDatabaseMasterkey_Azure_Basic_update(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseMasterkey_Local_PasswordWo(t *testing.T) {
+	keyGuid := ""
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseMasterkeyDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckDatabaseMasterkey(t, "wo", "login", map[string]interface{}{"database": "master", "password_wo": "V3ryS3cretP@asswd", "password_wo_version": 1}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseMasterkeyExists("mssql_database_masterkey.wo"),
+					resource.TestCheckNoResourceAttr("mssql_database_masterkey.wo", "password"),
+					resource.TestCheckNoResourceAttr("mssql_database_masterkey.wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.wo", "password_wo_version", "1"),
+					resource.TestCheckResourceAttrWith("mssql_database_masterkey.wo", "key_guid", func(v string) error {
+						keyGuid = v
+						return nil
+					}),
+				),
+			},
+			{
+				// Changing the value without bumping the version does not regenerate the key
+				Config: testAccCheckDatabaseMasterkey(t, "wo", "login", map[string]interface{}{"database": "master", "password_wo": "V3ryS3cretP@asswdUpdated123", "password_wo_version": 1}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith("mssql_database_masterkey.wo", "key_guid", func(v string) error {
+						if v != keyGuid {
+							return fmt.Errorf("expected key_guid to stay [%s], got [%s]", keyGuid, v)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config: testAccCheckDatabaseMasterkey(t, "wo", "login", map[string]interface{}{"database": "master", "password_wo": "V3ryS3cretP@asswdUpdated123", "password_wo_version": 2}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseMasterkeyExists("mssql_database_masterkey.wo"),
+					resource.TestCheckNoResourceAttr("mssql_database_masterkey.wo", "password"),
+					resource.TestCheckNoResourceAttr("mssql_database_masterkey.wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.wo", "password_wo_version", "2"),
+					resource.TestCheckResourceAttrWith("mssql_database_masterkey.wo", "key_guid", func(v string) error {
+						if v == keyGuid {
+							return fmt.Errorf("expected key_guid to change after regenerating the key, still [%s]", v)
+						}
+						return nil
+					}),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseMasterkey_Azure_PasswordWo(t *testing.T) {
+	keyGuid := ""
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseMasterkeyDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckDatabaseMasterkey(t, "wo", "azure", map[string]interface{}{"database": "testdb", "password_wo": "V3ryS3cretP@asswd", "password_wo_version": 1}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseMasterkeyExists("mssql_database_masterkey.wo"),
+					resource.TestCheckNoResourceAttr("mssql_database_masterkey.wo", "password"),
+					resource.TestCheckNoResourceAttr("mssql_database_masterkey.wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.wo", "password_wo_version", "1"),
+					resource.TestCheckResourceAttrWith("mssql_database_masterkey.wo", "key_guid", func(v string) error {
+						keyGuid = v
+						return nil
+					}),
+				),
+			},
+			{
+				// Changing the value without bumping the version does not regenerate the key
+				Config: testAccCheckDatabaseMasterkey(t, "wo", "azure", map[string]interface{}{"database": "testdb", "password_wo": "V3ryS3cretP@asswdUpdated123", "password_wo_version": 1}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith("mssql_database_masterkey.wo", "key_guid", func(v string) error {
+						if v != keyGuid {
+							return fmt.Errorf("expected key_guid to stay [%s], got [%s]", keyGuid, v)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config: testAccCheckDatabaseMasterkey(t, "wo", "azure", map[string]interface{}{"database": "testdb", "password_wo": "V3ryS3cretP@asswdUpdated123", "password_wo_version": 2}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseMasterkeyExists("mssql_database_masterkey.wo"),
+					resource.TestCheckNoResourceAttr("mssql_database_masterkey.wo", "password"),
+					resource.TestCheckNoResourceAttr("mssql_database_masterkey.wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_database_masterkey.wo", "password_wo_version", "2"),
+					resource.TestCheckResourceAttrWith("mssql_database_masterkey.wo", "key_guid", func(v string) error {
+						if v == keyGuid {
+							return fmt.Errorf("expected key_guid to change after regenerating the key, still [%s]", v)
+						}
+						return nil
+					}),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckDatabaseMasterkey(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `resource "mssql_database_masterkey" "{{ .name }}" {
 				server {
@@ -157,7 +260,9 @@ func testAccCheckDatabaseMasterkey(t *testing.T, name string, login string, data
 					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				database = "{{ .database }}"
-				password = "{{ .password }}"
+				{{ with .password }}password = "{{ . }}"{{ end }}
+				{{ with .password_wo }}password_wo = "{{ . }}"{{ end }}
+				{{ with .password_wo_version }}password_wo_version = {{ . }}{{ end }}
 			}`
 
 	data["name"] = name

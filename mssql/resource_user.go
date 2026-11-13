@@ -6,6 +6,7 @@ import (
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -53,14 +54,14 @@ func resourceUser() *schema.Resource {
 				Optional:      true,
 				ForceNew:      true,
 				ValidateFunc:  validation.StringInSlice([]string{"E", "X"}, false),
-				ConflictsWith: []string{loginNameProp, passwordProp},
+				ConflictsWith: []string{loginNameProp, passwordProp, passwordWoProp},
 				RequiredWith:  []string{objectIdProp},
 			},
 			loginNameProp: {
 				Type:          schema.TypeString,
 				Optional:      true,
 				ForceNew:      true,
-				ConflictsWith: []string{passwordProp, objectIdProp},
+				ConflictsWith: []string{passwordProp, passwordWoProp, objectIdProp},
 				ValidateFunc:  validate.SQLIdentifier,
 			},
 			passwordProp: {
@@ -68,6 +69,20 @@ func resourceUser() *schema.Resource {
 				Optional:     true,
 				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
+			},
+			passwordWoProp: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				ValidateFunc:  validate.SQLIdentifierPassword,
+				ConflictsWith: []string{passwordProp, loginNameProp, objectIdProp},
+				RequiredWith:  []string{passwordWoVersionProp},
+			},
+			passwordWoVersionProp: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				RequiredWith: []string{passwordWoProp},
 			},
 			sidStrProp: {
 				Type:     schema.TypeString,
@@ -128,6 +143,16 @@ func resourceUserCreate(ctx context.Context, data *schema.ResourceData, meta int
 	objectId := data.Get(objectIdProp).(string)
 	loginName := data.Get(loginNameProp).(string)
 	password := data.Get(passwordProp).(string)
+	if password == "" {
+		// password_wo is never stored in state, so it is read from the raw configuration
+		wo, diags := data.GetRawConfigAt(cty.GetAttrPath(passwordWoProp))
+		if diags.HasError() {
+			return diags
+		}
+		if wo.IsKnown() && !wo.IsNull() {
+			password = wo.AsString()
+		}
+	}
 	typeStr := data.Get(typeStrProp).(string)
 	defaultSchema := data.Get(defaultSchemaProp).(string)
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
@@ -231,7 +256,7 @@ func resourceUserUpdate(ctx context.Context, data *schema.ResourceData, meta int
 
 	// Store old values for all properties that might change
 	oldValues := make(map[string]interface{})
-	for _, prop := range []string{passwordProp, defaultSchemaProp, defaultLanguageProp} {
+	for _, prop := range []string{passwordProp, passwordWoVersionProp, defaultSchemaProp, defaultLanguageProp} {
 		if data.HasChange(prop) {
 			oldValue, _ := data.GetChange(prop)
 			oldValues[prop] = oldValue
@@ -257,9 +282,20 @@ func resourceUserUpdate(ctx context.Context, data *schema.ResourceData, meta int
 		Roles:           toStringSlice(roles),
 	}
 
-	// Only include password in the update if it has changed
-	if data.HasChange(passwordProp) {
+	// Only include password in the update if it has changed. For password_wo
+	// the change is signalled by password_wo_version, as the value itself is
+	// never stored in state.
+	if data.HasChange(passwordProp) || data.HasChange(passwordWoVersionProp) {
 		user.Password = data.Get(passwordProp).(string)
+		if user.Password == "" {
+			wo, diags := data.GetRawConfigAt(cty.GetAttrPath(passwordWoProp))
+			if diags.HasError() {
+				return diags
+			}
+			if wo.IsKnown() && !wo.IsNull() {
+				user.Password = wo.AsString()
+			}
+		}
 	}
 
 	if err = connector.UpdateUser(ctx, database, user); err != nil {

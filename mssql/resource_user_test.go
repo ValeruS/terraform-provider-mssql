@@ -186,6 +186,64 @@ func TestAccUser_Azure_Database_Update_Password(t *testing.T) {
 	})
 }
 
+func TestAccUser_Azure_Database_PasswordWo(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckUser(t, "azure_wo", "azure", map[string]interface{}{"database": "testdb", "username": "test_password_wo", "password_wo": "valueIsH8kd$¡", "password_wo_version": 1, "roles": "[\"db_owner\"]"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUserExists("mssql_user.azure_wo"),
+					testAccCheckDatabaseUserWorks("mssql_user.azure_wo", "test_password_wo", "valueIsH8kd$¡"),
+					resource.TestCheckResourceAttr("mssql_user.azure_wo", "authentication_type", "DATABASE"),
+					resource.TestCheckNoResourceAttr("mssql_user.azure_wo", "password"),
+					resource.TestCheckNoResourceAttr("mssql_user.azure_wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_user.azure_wo", "password_wo_version", "1"),
+				),
+			},
+			{
+				// Changing the value without bumping the version does not rotate the password
+				Config: testAccCheckUser(t, "azure_wo", "azure", map[string]interface{}{"database": "testdb", "username": "test_password_wo", "password_wo": "otherIsH8kd$¡", "password_wo_version": 1, "roles": "[\"db_owner\"]"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseUserWorks("mssql_user.azure_wo", "test_password_wo", "valueIsH8kd$¡"),
+				),
+			},
+			{
+				Config: testAccCheckUser(t, "azure_wo", "azure", map[string]interface{}{"database": "testdb", "username": "test_password_wo", "password_wo": "otherIsH8kd$¡", "password_wo_version": 2, "roles": "[\"db_owner\"]"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseUserWorks("mssql_user.azure_wo", "test_password_wo", "otherIsH8kd$¡"),
+					resource.TestCheckNoResourceAttr("mssql_user.azure_wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_user.azure_wo", "password_wo_version", "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccUser_Local_PasswordWo_Validate(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccCheckUser(t, "wo_validate", "login", map[string]interface{}{"username": "wo_validate", "password": "valueIsH8kd$¡", "password_wo": "valueIsH8kd$¡", "password_wo_version": 1}),
+				ExpectError: regexp.MustCompile(`"password_wo": conflicts with password`),
+			},
+			{
+				Config:      testAccCheckUser(t, "wo_validate", "login", map[string]interface{}{"username": "wo_validate", "login_name": "wo_validate", "login_password": "valueIsH8kd$¡", "password_wo": "valueIsH8kd$¡", "password_wo_version": 1}),
+				ExpectError: regexp.MustCompile(`"password_wo": conflicts with login_name`),
+			},
+			{
+				Config:      testAccCheckUser(t, "wo_validate", "login", map[string]interface{}{"username": "wo_validate", "password_wo_version": 1}),
+				ExpectError: regexp.MustCompile(`all of .password_wo,password_wo_version. must be\s+specified`),
+			},
+		},
+	})
+}
+
 func TestAccUser_Azure_Database_Pass_Validate(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -579,6 +637,8 @@ func testAccCheckUser(t *testing.T, name string, login string, data map[string]i
 				{{ with .database }}database = "{{ . }}"{{ end }}
 				username = "{{ .username }}"
 				{{ with .password }}password = "{{ . }}"{{ end }}
+				{{ with .password_wo }}password_wo = "{{ . }}"{{ end }}
+				{{ with .password_wo_version }}password_wo_version = {{ . }}{{ end }}
 				{{ with .login_name }}login_name = "{{ . }}"{{ end }}
 				{{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
 				{{ with .default_language }}default_language = "{{ . }}"{{ end }}

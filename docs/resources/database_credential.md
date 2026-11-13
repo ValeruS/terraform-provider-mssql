@@ -32,6 +32,30 @@ resource "mssql_database_credential" "example" {
 }
 ```
 
+### Using a write-only secret
+
+With Terraform 1.11 or later, `secret_wo` keeps the secret out of the plan and state. Increment
+`secret_wo_version` to apply a new secret.
+
+```hcl
+resource "random_password" "password" {
+  length = 24
+}
+
+resource "mssql_database_credential" "example" {
+  server {
+    host = "example-sql-server.database.windows.net"
+    azure_login {}
+  }
+
+  database          = "example-db"
+  credential_name   = "example-credential-name"
+  identity_name     = "example-identity"
+  secret_wo         = random_password.password.result
+  secret_wo_version = 1
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -40,7 +64,9 @@ The following arguments are supported:
 * `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
 * `credential_name` - (Required) Specifies the name of the database scoped credential being created. Changing this forces a new resource to be created.
 * `identity_name` - (Required) Specifies the name of the account to be used when connecting outside the server. Changing this resource property modifies the existing resource.
-* `secret` - (Optional) Specifies the secret required for outgoing authentication. Changing this resource property modifies the existing resource.
+* `secret` - (Optional) Specifies the secret required for outgoing authentication. The value is stored in the Terraform state. Conflicts with `secret_wo`. Changing this resource property modifies the existing resource.
+* `secret_wo` - (Optional) Specifies the secret required for outgoing authentication, as a [write-only argument](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments): it is never stored in the plan or state, and can take an ephemeral value. Requires Terraform 1.11 or later. Conflicts with `secret`. Must be used together with `secret_wo_version`.
+* `secret_wo_version` - (Optional) Version of the `secret_wo` value. Terraform cannot detect a change to `secret_wo`, so change this value (for example, increment it) to apply a new secret. Required with `secret_wo`.
 
 The `server` block supports the following arguments:
 

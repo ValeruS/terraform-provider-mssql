@@ -16,13 +16,37 @@ resource "mssql_login" "example" {
 }
 ```
 
+### Using a write-only password
+
+With Terraform 1.11 or later, `password_wo` keeps the password out of the plan and state. Increment
+`password_wo_version` to apply a new password.
+
+```hcl
+resource "random_password" "password" {
+  length = 24
+}
+
+resource "mssql_login" "example" {
+  server {
+    host = "example-sql-server.database.windows.net"
+    azure_login {}
+  }
+
+  login_name          = "testlogin"
+  password_wo         = random_password.password.result
+  password_wo_version = 1
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `login_name` - (Required) The name of the server login. Changing this forces a new resource to be created.
-* `password` - (Required) The password of the server login.
+* `password` - (Optional) The password of the server login. The value is stored in the Terraform state. Exactly one of `password` and `password_wo` must be specified.
+* `password_wo` - (Optional) The password of the server login, as a [write-only argument](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments): it is never stored in the plan or state, and can take an ephemeral value. Requires Terraform 1.11 or later. Conflicts with `password`. Must be used together with `password_wo_version`.
+* `password_wo_version` - (Optional) Version of the `password_wo` value. Terraform cannot detect a change to `password_wo`, so change this value (for example, increment it) to apply a new password. Required with `password_wo`.
 * `sid` - (Optional) The SID (Security Identifier) in SQL Server is a unique identifier that represents a login at the server level. Changing this forces a new resource to be created.
 * `default_database` - (Optional) The default database of this server login. Defaults to `master`. This argument does not apply to Azure SQL Database.
 * `default_language` - (Optional) The default language of this server login. Defaults to `us_english`. This argument does not apply to Azure SQL Database.

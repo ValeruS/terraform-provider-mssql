@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `password_wo` and `password_wo_version` arguments on `mssql_login`, `mssql_user` and `mssql_database_masterkey`: a
+  write-only password that is never stored in the plan or state (requires Terraform 1.11 or later); increment
+  `password_wo_version` to apply a new password
+- `secret_wo` and `secret_wo_version` arguments on `mssql_database_credential`: a write-only secret that is never stored
+  in the plan or state (requires Terraform 1.11 or later); increment `secret_wo_version` to apply a new secret
+
+### Changed
+
+- `mssql_login` and `mssql_database_masterkey`: `password` is now optional; exactly one of `password` and `password_wo`
+  must be specified
+- `mssql_login`: an update sets the password only when `password` or `password_wo_version` changes, instead of
+  resetting it on every update (for example when only `default_database` or `default_language` changes)
+
 ## [0.8.0]
 
 ### Added
