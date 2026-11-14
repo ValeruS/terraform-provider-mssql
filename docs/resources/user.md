@@ -102,7 +102,7 @@ The following arguments are supported:
 * `password_wo` - (Optional) The password of the database user, as a [write-only argument](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments): it is never stored in the plan or state, and can take an ephemeral value. Requires Terraform 1.11 or later. Conflicts with the `password`, `login_name` and `object_id` arguments. Must be used together with `password_wo_version`.
 * `password_wo_version` - (Optional) Version of the `password_wo` value. Terraform cannot detect a change to `password_wo`, so change this value (for example, increment it) to apply a new password. Required with `password_wo`.
 * `login_name` - (Optional) The login name of the database user. This must refer to an existing SQL Server login name. Conflicts with the `password` and `password_wo` arguments. Changing this forces a new resource to be created.
-* `object_id` - (Optional) The Microsoft Entra Object ID (Azure AD Object ID) of the user, group, or service principal. Required when creating a user mapped to an Azure AD identity. This can be used instead of looking up the Azure AD identity by username. Changing this forces a new resource to be created.
+* `object_id` - (Optional) The Microsoft Entra ID of the principal the user is mapped to, used as the SID of the user: the Object ID of a user or group, or the Client ID of a service principal or managed identity. Must be a valid UUID. This can be used instead of looking up the Microsoft Entra identity by username, and `username` can then be any name. Changing this forces a new resource to be created.
 * `type` - (Optional) Specifies the type of a Microsoft Entra principal. `E` indicates the principal is a user or a service principal (an application or a managed identity). `X` indicates the principal is a group. Can be used with `object_id` to specify the type of Azure AD entity. Changing this forces a new resource to be created.
 * `default_schema` - (Optional) Specifies the first schema that will be searched by the server when it resolves the names of objects for this database user. Defaults to `dbo`.
 * `default_language` - (Optional) Specifies the default language for the user. If no default language is specified, the default language for the user will bed the default language of the database. This argument does not apply to Azure SQL Database or if the user is not a contained database user.
@@ -188,4 +188,10 @@ Using `azuread_default_chain_auth` with `credential_type = "az_cli"`:
 
 ```shell
 terraform import mssql_user.example 'mssql://example-sql-server.database.windows.net/example-db/user/username?auth=default_chain&credential_type=az_cli'
+```
+
+When the user was created with `object_id`, add it to the import ID after the user name. Without it the next plan replaces the user:
+
+```shell
+terraform import mssql_user.example 'mssql://example-sql-server.database.windows.net/example-db/user/username/00000000-0000-0000-0000-000000000000?azure=true'
 ```

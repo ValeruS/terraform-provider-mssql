@@ -620,6 +620,46 @@ func TestAccUser_Azure_Update_Roles(t *testing.T) {
 	})
 }
 
+func TestAccUser_Azure_ObjectId(t *testing.T) {
+	tenantId := os.Getenv("MSSQL_TENANT_ID")
+	clientId := os.Getenv("TF_ACC_AZURE_USER_CLIENT_ID")
+	clientSecret := os.Getenv("TF_ACC_AZURE_USER_CLIENT_SECRET")
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				// For a service principal, object_id is its client ID: it becomes the SID
+				// of the user, and the user name does not have to match the principal.
+				Config: testAccCheckUser(t, "object_id", "azure", map[string]interface{}{"database": "testdb", "username": "user_object_id", "object_id": clientId, "type": "E", "roles": "[\"db_owner\"]"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUserExists("mssql_user.object_id"),
+					testAccCheckExternalUserWorks("mssql_user.object_id", tenantId, clientId, clientSecret),
+					resource.TestCheckResourceAttr("mssql_user.object_id", "username", "user_object_id"),
+					resource.TestCheckResourceAttr("mssql_user.object_id", "object_id", clientId),
+					resource.TestCheckResourceAttr("mssql_user.object_id", "type", "E"),
+					resource.TestCheckResourceAttr("mssql_user.object_id", "authentication_type", "EXTERNAL"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccUser_Local_ObjectId_Validate(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccCheckUser(t, "object_id_validate", "login", map[string]interface{}{"username": "user_object_id_validate", "object_id": "not-a-guid", "type": "E"}),
+				ExpectError: regexp.MustCompile(`expected "object_id" to be a valid UUID`),
+			},
+		},
+	})
+}
+
 func testAccCheckUser(t *testing.T, name string, login string, data map[string]interface{}) string {
 	text := `{{ if .login_name }}
 			resource "mssql_login" "{{ .name }}" {
@@ -642,6 +682,8 @@ func testAccCheckUser(t *testing.T, name string, login string, data map[string]i
 				{{ with .password_wo }}password_wo = "{{ . }}"{{ end }}
 				{{ with .password_wo_version }}password_wo_version = {{ . }}{{ end }}
 				{{ with .login_name }}login_name = "{{ . }}"{{ end }}
+				{{ with .object_id }}object_id = "{{ . }}"{{ end }}
+				{{ with .type }}type = "{{ . }}"{{ end }}
 				{{ with .default_schema }}default_schema = "{{ . }}"{{ end }}
 				{{ with .default_language }}default_language = "{{ . }}"{{ end }}
 				{{ with .roles }}roles = {{ . }}{{ end }}

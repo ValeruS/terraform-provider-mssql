@@ -24,11 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mssql_entraid_login`: import a login created with `object_id` by adding the Object ID after the login name in the
   import ID (`.../login/<login_name>/<object_id>`); previously `object_id` was not imported and the next plan replaced
   the login
+- `mssql_user`: import a user created with `object_id` by adding it after the user name in the import ID
+  (`.../<database>/user/<username>/<object_id>`); previously `object_id` was not imported and the next plan replaced the
+  user
 
 ### Changed
 
 - Make minimum terraform version 1.11, required for the write-only arguments
-- `mssql_entraid_login`: `object_id` must be a valid UUID
+- `mssql_entraid_login` and `mssql_user`: `object_id` must be a valid UUID
 
 ### Fixed
 
