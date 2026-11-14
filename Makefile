@@ -1,9 +1,9 @@
 SHELL := /bin/bash
 
-VERSION	= 0.8.0
+VERSION	= 0.9.0
 
 TERRAFORM	  = terraform
-TERRAFORM_VERSION = "~> 1.5"
+TERRAFORM_VERSION = "~> 1.11"
 
 GO	 = go
 MODULE	 = $(shell env GO111MODULE=on $(GO) list -m)

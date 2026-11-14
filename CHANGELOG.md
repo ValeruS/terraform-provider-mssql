@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0]
+
 ### Added
 
 - Import with `azuread_default_chain_auth` and `azuread_managed_identity_auth`: add `auth=default_chain` (with optional
@@ -19,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `password_wo_version` changes
 - `secret_wo` and `secret_wo_version` arguments on `mssql_database_credential`: a write-only secret that is never stored
   in the plan or state (requires Terraform 1.11 or later); increment `secret_wo_version` to apply a new secret
+
+### Changed
+
+- Make minimum terraform version 1.11, required for the write-only arguments
 
 ### Fixed
 
