@@ -16,13 +16,37 @@ resource "mssql_database_masterkey" "example" {
 }
 ```
 
+### Using a write-only password
+
+With Terraform 1.11 or later, `password_wo` keeps the password out of the plan and state. Increment
+`password_wo_version` to regenerate the master key with a new password.
+
+```hcl
+resource "random_password" "password" {
+  length = 24
+}
+
+resource "mssql_database_masterkey" "example" {
+  server {
+    host = "example-sql-server.database.windows.net"
+    azure_login {}
+  }
+
+  database            = "example-db"
+  password_wo         = random_password.password.result
+  password_wo_version = 1
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
-* `password` - (Required) The password that is used to encrypt the master key in the database. Changing this resource property modifies the existing resource.
+* `password` - (Optional) The password that is used to encrypt the master key in the database. The value is stored in the Terraform state. Exactly one of `password` and `password_wo` must be specified. Changing this resource property modifies the existing resource.
+* `password_wo` - (Optional) The password that is used to encrypt the master key in the database, as a [write-only argument](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments): it is never stored in the plan or state, and can take an ephemeral value. Requires Terraform 1.11 or later. Conflicts with `password`. Must be used together with `password_wo_version`.
+* `password_wo_version` - (Optional) Version of the `password_wo` value. Terraform cannot detect a change to `password_wo`, so change this value (for example, increment it) to regenerate the master key with a new password. Required with `password_wo`.
 
 The `server` block supports the following arguments:
 

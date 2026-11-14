@@ -111,18 +111,16 @@ func getTestConnector(a map[string]string) (TestConnector, error) {
 	return testConnector{c: connector}, nil
 }
 
-func getTestLoginConnector(a map[string]string) (TestConnector, error) {
+func getTestLoginConnector(a map[string]string, password string) (TestConnector, error) {
 	prefix := serverProp + ".0."
 	connector := &sql.Connector{
 		Host:    a[prefix+"host"],
 		Port:    a[prefix+"port"],
 		Timeout: 60 * time.Second,
 	}
-	if password, ok := a[passwordProp]; ok {
-		connector.Login = &sql.LoginUser{
-			Username: a[loginNameProp],
-			Password: password,
-		}
+	connector.Login = &sql.LoginUser{
+		Username: a[loginNameProp],
+		Password: password,
 	}
 
 	return testConnector{c: connector}, nil

@@ -21,7 +21,7 @@ func TestAccLogin_Local_Basic(t *testing.T) {
 				Config: testAccCheckLogin(t, "basic", "login", map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckLoginExists("mssql_login.basic"),
-					testAccCheckLoginWorks("mssql_login.basic"),
+					testAccCheckLoginWorks("mssql_login.basic", "valueIsH8kd$¡"),
 					resource.TestCheckResourceAttr("mssql_login.basic", "login_name", "login_basic"),
 					resource.TestCheckResourceAttr("mssql_login.basic", "password", "valueIsH8kd$¡"),
 					resource.TestCheckResourceAttr("mssql_login.basic", "default_database", "master"),
@@ -66,7 +66,7 @@ func TestAccLogin_Local_Basic_SID(t *testing.T) {
 				Config: testAccCheckLogin(t, "basic", "login", map[string]interface{}{"login_name": "login_basic", "password": "valueIsH8kd$¡", "sid": "0xB7BDEF7990D03541BAA2AD73E4FF18E8"}),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckLoginExists("mssql_login.basic"),
-					testAccCheckLoginWorks("mssql_login.basic"),
+					testAccCheckLoginWorks("mssql_login.basic", "valueIsH8kd$¡"),
 					resource.TestCheckResourceAttr("mssql_login.basic", "login_name", "login_basic"),
 					resource.TestCheckResourceAttr("mssql_login.basic", "password", "valueIsH8kd$¡"),
 					resource.TestCheckResourceAttr("mssql_login.basic", "sid", "0xB7BDEF7990D03541BAA2AD73E4FF18E8"),
@@ -157,7 +157,7 @@ func TestAccLogin_Local_UpdateLoginName(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "login_name", "login_update_pre"),
 					testAccCheckLoginExists("mssql_login.test_update"),
-					testAccCheckLoginWorks("mssql_login.test_update"),
+					testAccCheckLoginWorks("mssql_login.test_update", "valueIsH8kd$¡"),
 				),
 			},
 			{
@@ -165,7 +165,7 @@ func TestAccLogin_Local_UpdateLoginName(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "login_name", "login_update_post"),
 					testAccCheckLoginExists("mssql_login.test_update"),
-					testAccCheckLoginWorks("mssql_login.test_update"),
+					testAccCheckLoginWorks("mssql_login.test_update", "valueIsH8kd$¡"),
 				),
 			},
 		}})
@@ -183,7 +183,7 @@ func TestAccLogin_Local_UpdatePassword(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "password", "valueIsH8kd$¡"),
 					testAccCheckLoginExists("mssql_login.test_update"),
-					testAccCheckLoginWorks("mssql_login.test_update"),
+					testAccCheckLoginWorks("mssql_login.test_update", "valueIsH8kd$¡"),
 				),
 			},
 			{
@@ -191,7 +191,7 @@ func TestAccLogin_Local_UpdatePassword(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "password", "otherIsH8kd$¡"),
 					testAccCheckLoginExists("mssql_login.test_update"),
-					testAccCheckLoginWorks("mssql_login.test_update"),
+					testAccCheckLoginWorks("mssql_login.test_update", "otherIsH8kd$¡"),
 				),
 			},
 		}})
@@ -209,7 +209,7 @@ func TestAccLogin_Local_UpdateDefaultDatabase(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "default_database", "master"),
 					testAccCheckLoginExists("mssql_login.test_update", Check{"default_database", "==", "master"}),
-					testAccCheckLoginWorks("mssql_login.test_update"),
+					testAccCheckLoginWorks("mssql_login.test_update", "valueIsH8kd$¡"),
 				),
 			},
 			{
@@ -217,7 +217,7 @@ func TestAccLogin_Local_UpdateDefaultDatabase(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "default_database", "tempdb"),
 					testAccCheckLoginExists("mssql_login.test_update", Check{"default_database", "==", "tempdb"}),
-					testAccCheckLoginWorks("mssql_login.test_update"),
+					testAccCheckLoginWorks("mssql_login.test_update", "valueIsH8kd$¡"),
 				),
 			},
 		}})
@@ -235,7 +235,7 @@ func TestAccLogin_Local_UpdateDefaultLanguage(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "default_language", "us_english"),
 					testAccCheckLoginExists("mssql_login.test_update"),
-					testAccCheckLoginWorks("mssql_login.test_update"),
+					testAccCheckLoginWorks("mssql_login.test_update", "valueIsH8kd$¡"),
 				),
 			},
 			{
@@ -243,7 +243,7 @@ func TestAccLogin_Local_UpdateDefaultLanguage(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "default_language", "russian"),
 					testAccCheckLoginExists("mssql_login.test_update", Check{"default_language", "==", "russian"}),
-					testAccCheckLoginWorks("mssql_login.test_update"),
+					testAccCheckLoginWorks("mssql_login.test_update", "valueIsH8kd$¡"),
 				),
 			},
 		}})
@@ -279,20 +279,159 @@ func TestAccLogin_Azure_UpdatePassword(t *testing.T) {
 		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckLogin(t, "test_update", "azure", map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡"}),
+				// On Azure SQL Database a login can only connect to a database where it has a user
+				Config: testAccCheckLogin(t, "test_update", "azure", map[string]interface{}{"login_name": "login_update", "password": "valueIsH8kd$¡", "user_database": "testdb"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "password", "valueIsH8kd$¡"),
 					testAccCheckLoginExists("mssql_login.test_update"),
+					testAccCheckDatabaseUserWorks("mssql_user.test_update", "login_update", "valueIsH8kd$¡"),
 				),
 			},
 			{
-				Config: testAccCheckLogin(t, "test_update", "azure", map[string]interface{}{"login_name": "login_update", "password": "otherIsH8kd$¡"}),
+				Config: testAccCheckLogin(t, "test_update", "azure", map[string]interface{}{"login_name": "login_update", "password": "otherIsH8kd$¡", "user_database": "testdb"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("mssql_login.test_update", "password", "otherIsH8kd$¡"),
 					testAccCheckLoginExists("mssql_login.test_update"),
+					testAccCheckDatabaseUserWorks("mssql_user.test_update", "login_update", "otherIsH8kd$¡"),
 				),
 			},
 		}})
+}
+
+func TestAccLogin_Azure_PasswordWo(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				// On Azure SQL Database a login can only connect to a database where it has a user
+				Config: testAccCheckLogin(t, "test_wo", "azure", map[string]interface{}{"login_name": "login_wo", "password_wo": "valueIsH8kd$¡", "password_wo_version": 1, "user_database": "testdb"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginExists("mssql_login.test_wo"),
+					testAccCheckDatabaseUserWorks("mssql_user.test_wo", "login_wo", "valueIsH8kd$¡"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_login.test_wo", "password_wo_version", "1"),
+					resource.TestCheckResourceAttrSet("mssql_login.test_wo", "principal_id"),
+				),
+			},
+			{
+				// Changing the value without bumping the version keeps the password
+				Config: testAccCheckLogin(t, "test_wo", "azure", map[string]interface{}{"login_name": "login_wo", "password_wo": "otherIsH8kd$¡", "password_wo_version": 1, "user_database": "testdb"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseUserWorks("mssql_user.test_wo", "login_wo", "valueIsH8kd$¡"),
+				),
+			},
+			{
+				Config: testAccCheckLogin(t, "test_wo", "azure", map[string]interface{}{"login_name": "login_wo", "password_wo": "otherIsH8kd$¡", "password_wo_version": 2, "user_database": "testdb"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginExists("mssql_login.test_wo"),
+					testAccCheckDatabaseUserWorks("mssql_user.test_wo", "login_wo", "otherIsH8kd$¡"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_login.test_wo", "password_wo_version", "2"),
+				),
+			},
+			{
+				// Switching back to the stored password
+				Config: testAccCheckLogin(t, "test_wo", "azure", map[string]interface{}{"login_name": "login_wo", "password": "thirdIsH8kd$¡", "user_database": "testdb"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginExists("mssql_login.test_wo"),
+					testAccCheckDatabaseUserWorks("mssql_user.test_wo", "login_wo", "thirdIsH8kd$¡"),
+					resource.TestCheckResourceAttr("mssql_login.test_wo", "password", "thirdIsH8kd$¡"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password_wo"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccLogin_Local_PasswordWo(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckLoginDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckLogin(t, "test_wo", "login", map[string]interface{}{"login_name": "login_wo", "password_wo": "valueIsH8kd$¡", "password_wo_version": 1}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginExists("mssql_login.test_wo"),
+					testAccCheckLoginWorks("mssql_login.test_wo", "valueIsH8kd$¡"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_login.test_wo", "password_wo_version", "1"),
+				),
+			},
+			{
+				// Changing default_language without bumping the version keeps the password
+				Config: testAccCheckLogin(t, "test_wo", "login", map[string]interface{}{"login_name": "login_wo", "password_wo": "valueIsH8kd$¡", "password_wo_version": 1, "default_language": "russian"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginWorks("mssql_login.test_wo", "valueIsH8kd$¡"),
+					resource.TestCheckResourceAttr("mssql_login.test_wo", "default_language", "russian"),
+				),
+			},
+			{
+				// Changing the value without bumping the version keeps the password,
+				// even when another argument triggers an update
+				Config: testAccCheckLogin(t, "test_wo", "login", map[string]interface{}{"login_name": "login_wo", "password_wo": "otherIsH8kd$¡", "password_wo_version": 1, "default_language": "us_english"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginWorks("mssql_login.test_wo", "valueIsH8kd$¡"),
+					resource.TestCheckResourceAttr("mssql_login.test_wo", "default_language", "us_english"),
+				),
+			},
+			{
+				Config: testAccCheckLogin(t, "test_wo", "login", map[string]interface{}{"login_name": "login_wo", "password_wo": "otherIsH8kd$¡", "password_wo_version": 1, "default_language": "russian"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginWorks("mssql_login.test_wo", "valueIsH8kd$¡"),
+				),
+			},
+			{
+				Config: testAccCheckLogin(t, "test_wo", "login", map[string]interface{}{"login_name": "login_wo", "password_wo": "otherIsH8kd$¡", "password_wo_version": 2, "default_language": "russian"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginWorks("mssql_login.test_wo", "otherIsH8kd$¡"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password_wo"),
+					resource.TestCheckResourceAttr("mssql_login.test_wo", "password_wo_version", "2"),
+				),
+			},
+			{
+				// Switching back to the stored password
+				Config: testAccCheckLogin(t, "test_wo", "login", map[string]interface{}{"login_name": "login_wo", "password": "thirdIsH8kd$¡", "default_language": "russian"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckLoginWorks("mssql_login.test_wo", "thirdIsH8kd$¡"),
+					resource.TestCheckResourceAttr("mssql_login.test_wo", "password", "thirdIsH8kd$¡"),
+					resource.TestCheckNoResourceAttr("mssql_login.test_wo", "password_wo"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccLogin_Local_PasswordWo_Validate(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccCheckLogin(t, "wo_validate", "login", map[string]interface{}{"login_name": "login_wo_validate"}),
+				ExpectError: regexp.MustCompile(`one of .password,password_wo. must be\s+specified`),
+			},
+			{
+				Config:      testAccCheckLogin(t, "wo_validate", "login", map[string]interface{}{"login_name": "login_wo_validate", "password": "valueIsH8kd$¡", "password_wo": "valueIsH8kd$¡", "password_wo_version": 1}),
+				ExpectError: regexp.MustCompile(`"password_wo": conflicts with password`),
+			},
+			{
+				Config:      testAccCheckLogin(t, "wo_validate", "login", map[string]interface{}{"login_name": "login_wo_validate", "password_wo": "valueIsH8kd$¡"}),
+				ExpectError: regexp.MustCompile(`all of .password_wo,password_wo_version. must be\s+specified`),
+			},
+			{
+				Config:      testAccCheckLogin(t, "wo_validate", "login", map[string]interface{}{"login_name": "login_wo_validate", "password_wo": "shotpas", "password_wo_version": 1}),
+				ExpectError: regexp.MustCompile(`.*password_wo.*`),
+			},
+		},
+	})
 }
 
 func testAccCheckLogin(t *testing.T, name string, login string, data map[string]interface{}) string {
@@ -302,11 +441,24 @@ func testAccCheckLogin(t *testing.T, name string, login string, data map[string]
 					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
 				}
 				login_name = "{{ .login_name }}"
-				password   = "{{ .password }}"
+				{{ with .password }}password = "{{ . }}"{{ end }}
+				{{ with .password_wo }}password_wo = "{{ . }}"{{ end }}
+				{{ with .password_wo_version }}password_wo_version = {{ . }}{{ end }}
 				{{ with .sid }}sid = "{{ . }}"{{ end }}
 				{{ with .default_database }}default_database = "{{ . }}"{{ end }}
 				{{ with .default_language }}default_language = "{{ . }}"{{ end }}
-			}`
+			}
+			{{ with .user_database }}
+			resource "mssql_user" "{{ $.name }}" {
+				server {
+					host = "{{ $.host }}"
+					{{if eq $.login "fedauth"}}azuread_default_chain_auth {}{{ else if eq $.login "msi"}}azuread_managed_identity_auth {}{{ else if eq $.login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+				}
+				database   = "{{ . }}"
+				username   = "{{ $.login_name }}"
+				login_name = mssql_login.{{ $.name }}.login_name
+			}
+			{{ end }}`
 
 	data["name"] = name
 	data["login"] = login
@@ -395,7 +547,7 @@ func testAccCheckLoginExists(resource string, checks ...Check) resource.TestChec
 	}
 }
 
-func testAccCheckLoginWorks(resource string) resource.TestCheckFunc {
+func testAccCheckLoginWorks(resource string, password string) resource.TestCheckFunc {
 	return func(state *terraform.State) error {
 		rs, ok := state.RootModule().Resources[resource]
 		if !ok {
@@ -407,7 +559,7 @@ func testAccCheckLoginWorks(resource string) resource.TestCheckFunc {
 		if rs.Primary.ID == "" {
 			return fmt.Errorf("no record ID is set")
 		}
-		connector, err := getTestLoginConnector(rs.Primary.Attributes)
+		connector, err := getTestLoginConnector(rs.Primary.Attributes, password)
 		if err != nil {
 			return err
 		}

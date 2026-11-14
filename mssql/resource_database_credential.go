@@ -6,6 +6,7 @@ import (
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
@@ -51,6 +52,20 @@ func resourceDatabaseCredential() *schema.Resource {
 				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
 			},
+			secretWoProp: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				ValidateFunc:  validate.SQLIdentifierPassword,
+				ConflictsWith: []string{secretProp},
+				RequiredWith:  []string{secretWoVersionProp},
+			},
+			secretWoVersionProp: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				RequiredWith: []string{secretWoProp},
+			},
 			principalIdProp: {
 				Type:     schema.TypeInt,
 				Computed: true,
@@ -85,6 +100,16 @@ func resourceDatabaseCredentialCreate(ctx context.Context, data *schema.Resource
 	credentialname := data.Get(credentialNameProp).(string)
 	identityname := data.Get(identitynameProp).(string)
 	secret := data.Get(secretProp).(string)
+	if secret == "" {
+		// secret_wo is never stored in state, so it is read from the raw configuration
+		wo, diags := data.GetRawConfigAt(cty.GetAttrPath(secretWoProp))
+		if diags.HasError() {
+			return diags
+		}
+		if wo.IsKnown() && !wo.IsNull() {
+			secret = wo.AsString()
+		}
+	}
 
 	connector, err := getDatabaseCredentialConnector(meta, data)
 	if err != nil {
@@ -157,11 +182,23 @@ func resourceDatabaseCredentialUpdate(ctx context.Context, data *schema.Resource
 	database := data.Get(databaseProp).(string)
 	credentialname := data.Get(credentialNameProp).(string)
 	identityname := data.Get(identitynameProp).(string)
+	// An empty secret leaves the existing one unchanged, so secret_wo is only
+	// sent when secret_wo_version changes.
 	secret := data.Get(secretProp).(string)
+	if secret == "" && data.HasChange(secretWoVersionProp) {
+		// secret_wo is never stored in state, so it is read from the raw configuration
+		wo, diags := data.GetRawConfigAt(cty.GetAttrPath(secretWoProp))
+		if diags.HasError() {
+			return diags
+		}
+		if wo.IsKnown() && !wo.IsNull() {
+			secret = wo.AsString()
+		}
+	}
 
 	// Store old values for all properties that might change
 	oldValues := make(map[string]interface{})
-	for _, prop := range []string{identitynameProp, secretProp} {
+	for _, prop := range []string{identitynameProp, secretProp, secretWoVersionProp} {
 		if data.HasChange(prop) {
 			oldValue, _ := data.GetChange(prop)
 			oldValues[prop] = oldValue
