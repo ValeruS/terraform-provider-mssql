@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- An empty `azuread_managed_identity_auth {}` block now uses the system-assigned managed identity; previously it was
+  ignored and the connection fell back to `ActiveDirectoryDefault`, which could authenticate as a different identity
+  (for example from `AZURE_*` environment variables or `az login`)
+
 ## [0.8.0]
 
 ### Added
