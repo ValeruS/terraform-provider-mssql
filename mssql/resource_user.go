@@ -44,9 +44,10 @@ func resourceUser() *schema.Resource {
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			objectIdProp: {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.IsUUID,
 			},
 			typeStrProp: {
 				Type:          schema.TypeString,
@@ -351,8 +352,9 @@ func resourceUserImport(ctx context.Context, data *schema.ResourceData, meta int
 		return nil, err
 	}
 
+	// /<database>/user/<username> or /<database>/user/<username>/<object_id>
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 4 {
+	if len(parts) != 4 && len(parts) != 5 {
 		return nil, errors.New("invalid ID")
 	}
 	if err = data.Set(databaseProp, parts[1]); err != nil {
@@ -360,6 +362,15 @@ func resourceUserImport(ctx context.Context, data *schema.ResourceData, meta int
 	}
 	if err = data.Set(usernameProp, parts[3]); err != nil {
 		return nil, err
+	}
+	// object_id is not read from the server, so it is taken from the import ID.
+	if len(parts) == 5 {
+		if _, errs := validation.IsUUID(parts[4], objectIdProp); len(errs) > 0 {
+			return nil, errs[0]
+		}
+		if err = data.Set(objectIdProp, parts[4]); err != nil {
+			return nil, err
+		}
 	}
 
 	data.SetId(getUserID(data))

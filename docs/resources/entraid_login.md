@@ -25,7 +25,7 @@ The following arguments are supported:
 
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `login_name` - (Required) The name of the EntraID login to look up. Changing this forces a new resource to be created.
-* `object_id` - (Optional) The Object ID of the EntraID principal (user, group, or application) to create the login for.  Changing this forces a new resource to be created.
+* `object_id` - (Optional) The Object ID of the EntraID principal (user, group, or application) to create the login for. Must be a valid UUID. For an application, use the Object ID of its service principal (enterprise application), not the client ID. Changing this forces a new resource to be created.
 
 The `server` block supports the following arguments:
 
@@ -106,4 +106,10 @@ Using `azuread_default_chain_auth` with `credential_type = "az_cli"`:
 
 ```shell
 terraform import mssql_entraid_login.example 'mssql://example-sql-server.database.windows.net/login/user@example.com?auth=default_chain&credential_type=az_cli'
+```
+
+When the login was created with `object_id`, add it to the import ID after the login name. The Object ID cannot be read from the server, and without it the next plan replaces the login:
+
+```shell
+terraform import mssql_entraid_login.example 'mssql://example-sql-server.database.windows.net/login/my-app/00000000-0000-0000-0000-000000000000?azure=true'
 ```

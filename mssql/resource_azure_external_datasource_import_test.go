@@ -23,7 +23,7 @@ func TestAccAzureExternalDatasource_Azure_BasicImport(t *testing.T) {
 				ResourceName:      "mssql_azure_external_datasource.test_import",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: testAccImportStateId("mssql_azure_external_datasource.test_import", "azure=true"),
+				ImportStateIdFunc: testAccImportStateId("mssql_azure_external_datasource.test_import", "", "azure=true"),
 			},
 		},
 	})

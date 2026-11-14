@@ -21,10 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `password_wo_version` changes
 - `secret_wo` and `secret_wo_version` arguments on `mssql_database_credential`: a write-only secret that is never stored
   in the plan or state (requires Terraform 1.11 or later); increment `secret_wo_version` to apply a new secret
+- `mssql_entraid_login`: import a login created with `object_id` by adding the Object ID after the login name in the
+  import ID (`.../login/<login_name>/<object_id>`); previously `object_id` was not imported and the next plan replaced
+  the login
+- `mssql_user`: import a user created with `object_id` by adding it after the user name in the import ID
+  (`.../<database>/user/<username>/<object_id>`); previously `object_id` was not imported and the next plan replaced the
+  user
 
 ### Changed
 
 - Make minimum terraform version 1.11, required for the write-only arguments
+- `mssql_entraid_login` and `mssql_user`: `object_id` must be a valid UUID
 
 ### Fixed
 

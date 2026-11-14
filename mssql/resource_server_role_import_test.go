@@ -24,7 +24,7 @@ func TestAccServerRole_Local_BasicImport(t *testing.T) {
 				ResourceName:      "mssql_server_role.test_import",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: testAccImportStateId("mssql_server_role.test_import", "azure=false"),
+				ImportStateIdFunc: testAccImportStateId("mssql_server_role.test_import", "", "azure=false"),
 			},
 		},
 	})

@@ -24,7 +24,7 @@ func TestAccDatabase_Local_Basic_Import(t *testing.T) {
 				ResourceName:      "mssql_database.local_import",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: testAccImportStateId("mssql_database.local_import", "azure=false"),
+				ImportStateIdFunc: testAccImportStateId("mssql_database.local_import", "", "azure=false"),
 			},
 		},
 	})

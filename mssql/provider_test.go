@@ -249,7 +249,9 @@ func templateToString(name, text string, data interface{}) (string, error) {
 
 // testAccImportStateId returns the ID of resource with query appended, e.g. "azure=true"
 // or "auth=default_chain".
-func testAccImportStateId(resource string, query string) func(state *terraform.State) (string, error) {
+// testAccImportStateId returns the import ID of resource, with path appended as an
+// extra path segment when it is not empty, followed by the query.
+func testAccImportStateId(resource string, path string, query string) func(state *terraform.State) (string, error) {
 	return func(state *terraform.State) (string, error) {
 		rs, ok := state.RootModule().Resources[resource]
 		if !ok {
@@ -258,7 +260,11 @@ func testAccImportStateId(resource string, query string) func(state *terraform.S
 		if rs.Primary.ID == "" {
 			return "", fmt.Errorf("no record ID is set")
 		}
-		return rs.Primary.ID + "?" + query, nil
+		id := rs.Primary.ID
+		if path != "" {
+			id += "/" + path
+		}
+		return id + "?" + query, nil
 	}
 }
 
