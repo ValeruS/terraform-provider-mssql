@@ -91,9 +91,19 @@ Before importing `mssql_entraid_login`, you must to configure the authentication
 
 1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
 2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
+3. Using `azuread_default_chain_auth`, add `auth=default_chain` to the import ID, together with `credential_type=<value>` or `use_oidc=true` when the configuration sets them. The `MSSQL_*` environment variables are not used.
+4. Using `azuread_managed_identity_auth`, add `auth=managed_identity` to the import ID, together with `user_id=<id>` for a user-assigned identity. The `MSSQL_*` environment variables are not used.
+
+The authentication in the import ID must match the `server` block of the configuration, otherwise the next plan shows a change to the `server` block.
 
 After that you can import the SQL Server EntraID login using the server URL and login name, e.g.
 
 ```shell
 terraform import mssql_entraid_login.example 'mssql://example-sql-server.database.windows.net/login/user@example.com'
+```
+
+Using `azuread_default_chain_auth` with `credential_type = "az_cli"`:
+
+```shell
+terraform import mssql_entraid_login.example 'mssql://example-sql-server.database.windows.net/login/user@example.com?auth=default_chain&credential_type=az_cli'
 ```

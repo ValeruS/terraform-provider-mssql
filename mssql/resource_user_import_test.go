@@ -24,7 +24,32 @@ func TestAccUser_Local_BasicImport(t *testing.T) {
 				ResourceName:      "mssql_user.test_import",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: testAccImportStateId("mssql_user.test_import", false),
+				ImportStateIdFunc: testAccImportStateId("mssql_user.test_import", "azure=false"),
+			},
+		},
+	})
+}
+
+func TestAccUser_AzureadChainEnvironment_BasicImport(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckUserDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckUser(t, "test_import", "fedauth", map[string]interface{}{"database": "testdb", "username": "user_import_chain", "password": "valueIsH8kd$¡", "roles": "[\"db_owner\"]", "credential_type": "environment"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUserExists("mssql_user.test_import"),
+				),
+			},
+			{
+				// ImportStateVerify also checks that the imported server block matches
+				// the azuread_default_chain_auth block of the configuration.
+				ResourceName:            "mssql_user.test_import",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"password"},
+				ImportStateIdFunc:       testAccImportStateId("mssql_user.test_import", "auth=default_chain&credential_type=environment"),
 			},
 		},
 	})

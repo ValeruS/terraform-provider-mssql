@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Import with `azuread_default_chain_auth` and `azuread_managed_identity_auth`: add `auth=default_chain` (with optional
+  `credential_type` or `use_oidc`) or `auth=managed_identity` (with optional `user_id`) to the import ID, so the
+  imported `server` block matches the configuration
+
 ### Fixed
 
 - An empty `azuread_managed_identity_auth {}` block now uses the system-assigned managed identity; previously it was
