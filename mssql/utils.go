@@ -48,6 +48,15 @@ func getDatabaseSchemaID(data *schema.ResourceData) string {
 	return fmt.Sprintf("sqlserver://%s:%s/%s/schema/%s", host, port, database, schemaName)
 }
 
+func getDatabaseSchemaPermissionID(data *schema.ResourceData) string {
+	host := data.Get(serverProp + ".0.host").(string)
+	port := data.Get(serverProp + ".0.port").(string)
+	database := data.Get(databaseProp).(string)
+	schemaName := data.Get(schemaNameProp).(string)
+	principalName := data.Get(principalNameProp).(string)
+	return fmt.Sprintf("sqlserver://%s:%s/%s/schema_permission/%s/%s", host, port, database, schemaName, principalName)
+}
+
 func getDatabaseCredentialID(data *schema.ResourceData) string {
 	host := data.Get(serverProp + ".0.host").(string)
 	port := data.Get(serverProp + ".0.port").(string)

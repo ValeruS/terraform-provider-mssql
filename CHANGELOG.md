@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `mssql_database_schema_permission` resource and data source: grant and revoke permissions on a schema for a database
+  principal, a user or a role (`GRANT ... ON SCHEMA::`), with in-place updates and import
+  (`.../<database>/schema_permission/<schema_name>/<principal_name>`)
+
 ## [0.9.1]
 
 ### Fixed
