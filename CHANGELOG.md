@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `mssql_database_object_permission` resource and data source: grant and revoke permissions on a database object
+  (table, view, procedure, function, sequence or synonym), or on one of its columns with `column_name`, for a database
+  principal, a user or a role (`GRANT ... ON OBJECT::`), with in-place updates and import
+  (`.../<database>/object_permission/<schema_name>/<object_name>/<principal_name>[/<column_name>]`)
+
 ## [0.9.1]
 
 ### Fixed

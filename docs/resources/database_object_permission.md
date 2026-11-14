@@ -1,0 +1,143 @@
+# mssql_database_object_permission
+
+The `mssql_database_object_permission` resource allows you to grant and manage permissions on a database object (a table, view, stored procedure, function, sequence or synonym) for a database principal (a user or a role) in SQL Server. See [GRANT Object Permissions](https://learn.microsoft.com/en-us/sql/t-sql/statements/grant-object-permissions-transact-sql) for details.
+
+## Example Usage
+
+```hcl
+resource "mssql_database_object_permission" "example" {
+  server {
+    host = "example-sql-server.database.windows.net"
+    azure_login {}
+  }
+
+  database       = "example"
+  schema_name    = "sales"
+  object_name    = "orders"
+  principal_name = "sql_username"
+  permissions = [
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+  ]
+}
+
+# Permissions on a single column
+resource "mssql_database_object_permission" "example_column" {
+  server {
+    host = "example-sql-server.database.windows.net"
+    azure_login {}
+  }
+
+  database       = "example"
+  schema_name    = "sales"
+  object_name    = "customers"
+  column_name    = "email"
+  principal_name = "sql_username"
+  permissions = [
+    "SELECT",
+    "UPDATE",
+  ]
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
+* `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
+* `schema_name` - (Required) The name of the schema that contains the object. Changing this forces a new resource to be created.
+* `object_name` - (Required) The name of the object on which the permissions are granted. Changing this forces a new resource to be created.
+* `column_name` - (Optional) The name of a column of the object. When set, the permissions are granted on that column only (`GRANT ... ON OBJECT::schema.object (column)`); only `SELECT`, `UPDATE` and `REFERENCES` apply to a column. Changing this forces a new resource to be created.
+* `principal_name` - (Required) The name of the database principal (a user or a role) the permissions are granted to. Changing this forces a new resource to be created.
+* `permissions` - (Required) Set of permissions to grant on the object. Permissions added or removed are granted or revoked in place. The permissions that apply depend on the object type, for example `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `REFERENCES` on a table or view, and `EXECUTE` on a stored procedure or function. Other valid permissions include `ALTER`, `CONTROL`, `RECEIVE`, `TAKE OWNERSHIP`, `VIEW CHANGE TRACKING` and `VIEW DEFINITION`.
+
+-> The resource manages every permission the principal holds on the object: a permission granted outside Terraform shows as a change in the next plan and is revoked on apply. Use one `mssql_database_object_permission` per principal and object, and one per principal and column. Permissions granted `WITH GRANT OPTION` are not managed.
+
+~> Do not manage the same permission on an object and on one of its columns for the same principal. SQL Server removes the column-level permission when the same permission is granted or revoked on the object, and ignores a column-level grant when the permission is already granted on the object, so the two resources keep changing each other. Different permissions, such as `INSERT` on the table and `SELECT` on a column, can be managed together.
+
+The `server` block supports the following arguments:
+
+* `host` - (Required) The host of the SQL Server. Changing this forces a new resource to be created.
+* `port` - (Optional) The port of the SQL Server. Defaults to `1433`. Changing this forces a new resource to be created.
+* `login` - (Optional) SQL Server login for managing the database resources. The attributes supported in the `login` block is detailed below.
+* `azure_login` - (Optional) Azure AD login for managing the database resources. The attributes supported in the `azure_login` block is detailed below.
+* `azuread_default_chain_auth` - (Optional) Use a chain of strategies for authenticating when managing the database resources. This auth strategy is very similar to how the Azure CLI authenticates. For more information, see [DefaultAzureCredential](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication#configure-defaultazurecredential). The attributes supported in the `azuread_default_chain_auth` block are detailed below.
+* `azuread_managed_identity_auth` - (Optional) Use a managed identity for authenticating when managing the database resources. This is mainly useful for specifying a user-assigned managed identity. The attributes supported in the `azuread_managed_identity_auth` block is detailed below.
+
+The `login` block supports the following arguments:
+
+* `username` - (Required) The username of the SQL Server login. Can also be sourced from the `MSSQL_USERNAME` environment variable.
+* `password` - (Required) The password of the SQL Server login. Can also be sourced from the `MSSQL_PASSWORD` environment variable.
+
+The `azure_login` block supports the following arguments:
+
+* `tenant_id` - (Required) The tenant ID of the principal used to login to the SQL Server. Can also be sourced from the `MSSQL_TENANT_ID` environment variable.
+* `client_id` - (Required) The client ID of the principal used to login to the SQL Server. Can also be sourced from the `MSSQL_CLIENT_ID` environment variable.
+* `client_secret` - (Required) The client secret of the principal used to login to the SQL Server. Can also be sourced from the `MSSQL_CLIENT_SECRET` environment variable.
+
+The `azuread_default_chain_auth` block supports the following arguments:
+
+* `use_oidc` - (Optional) Use a federated/OIDC credential (workload identity federation) instead of the default credential chain. Defaults to `false`. Conflicts with `credential_type`. Required environment variables:
+
+  | Variable | Description |
+  |---|---|
+  | `ARM_TENANT_ID` | Tenant ID of the App Registration |
+  | `ARM_CLIENT_ID` | Client ID of the App Registration |
+  | `ARM_OIDC_TOKEN` | Signed JWT token (inline). Use this **or** `ARM_OIDC_TOKEN_FILE_PATH`. |
+  | `ARM_OIDC_TOKEN_FILE_PATH` | Path to a file containing the signed JWT. The file is re-read on every token refresh. |
+
+* `credential_type` - (Optional) Use a single credential instead of the default credential chain. Conflicts with `use_oidc`. Valid values:
+
+  | Value | go-mssqldb `fedauth` | Notes |
+  |---|---|---|
+  | `az_cli` | `ActiveDirectoryAzCli` | Uses the identity signed in to the Azure CLI (`az login`). |
+  | `azure_developer_cli` | `ActiveDirectoryAzureDeveloperCli` | Uses the identity signed in to the Azure Developer CLI (`azd auth login`). |
+  | `azure_pipelines` | `ActiveDirectoryAzurePipelines` | Uses an Azure DevOps service connection (workload identity federation). Works with `TerraformTask@5` (reads `ARM_CLIENT_ID`, `ARM_TENANT_ID`, `ARM_OIDC_AZURE_SERVICE_CONNECTION_ID` and `ARM_OIDC_REQUEST_TOKEN`), or with `AzureCLI@2` / `AzurePowerShell@5` (reads `AZURESUBSCRIPTION_CLIENT_ID`, `AZURESUBSCRIPTION_TENANT_ID`, `AZURESUBSCRIPTION_SERVICE_CONNECTION_ID`, plus `SYSTEM_ACCESSTOKEN` mapped from `$(System.AccessToken)`). |
+  | `environment` | `ActiveDirectoryEnvironment` | Uses the `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` / `AZURE_CLIENT_CERTIFICATE_PATH` environment variables. |
+  | `workload_identity` | `ActiveDirectoryWorkloadIdentity` | Uses Kubernetes workload identity (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_FEDERATED_TOKEN_FILE`). |
+
+  When omitted, `ActiveDirectoryDefault` is used, so an empty `azuread_default_chain_auth {}` block keeps the default credential chain.
+
+The `azuread_managed_identity_auth` block supports the following arguments:
+
+* `user_id` - (Optional) Id of a user-assigned managed identity to assume. Omitting this property instructs the provider to assume a system-assigned managed identity.
+
+-> Only one of `login`, `azure_login`, `azuread_default_chain_auth` and `azuread_managed_identity_auth` can be specified.
+
+## Attribute Reference
+
+The following attributes are exported:
+
+* `principal_id` - The principal id of the database principal.
+* `object_id` - The id of the object.
+
+## Import
+
+Before importing `mssql_database_object_permission`, you must to configure the authentication to your sql server:
+
+1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
+2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
+3. Using `azuread_default_chain_auth`, add `auth=default_chain` to the import ID, together with `credential_type=<value>` or `use_oidc=true` when the configuration sets them. The `MSSQL_*` environment variables are not used.
+4. Using `azuread_managed_identity_auth`, add `auth=managed_identity` to the import ID, together with `user_id=<id>` for a user-assigned identity. The `MSSQL_*` environment variables are not used.
+
+The authentication in the import ID must match the `server` block of the configuration, otherwise the next plan shows a change to the `server` block.
+
+After that you can import the object permissions using the server URL, the `schema name`, the `object name` and the `principal name`, followed by the `column name` for column permissions, e.g.
+
+```shell
+terraform import mssql_database_object_permission.example 'mssql://example-sql-server.database.windows.net/example-db/object_permission/sales/orders/principal_name'
+```
+
+Permissions on a column:
+
+```shell
+terraform import mssql_database_object_permission.example_column 'mssql://example-sql-server.database.windows.net/example-db/object_permission/sales/customers/principal_name/email'
+```
+
+Using `azuread_default_chain_auth` with `credential_type = "az_cli"`:
+
+```shell
+terraform import mssql_database_object_permission.example 'mssql://example-sql-server.database.windows.net/example-db/object_permission/sales/orders/principal_name?auth=default_chain&credential_type=az_cli'
+```
