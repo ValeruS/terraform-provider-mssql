@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `mssql_database_permissions` now reads only database-level permissions; previously permissions granted on a schema
+  or an object were read as database permissions and the next plan tried to change them
+
 ## [0.9.0]
 
 ### Added

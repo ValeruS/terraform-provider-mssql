@@ -12,7 +12,7 @@ func (c *Connector) GetDatabasePermissions(ctx context.Context, database string,
 	cmd := `SELECT DISTINCT pr.principal_id, pr.name, pe.permission_name
 			FROM [sys].[database_principals] AS pr LEFT JOIN [sys].[database_permissions] AS pe
 			ON pe.grantee_principal_id = pr.principal_id
-			WHERE pr.name = @username AND pe.[state] = 'G'`
+			WHERE pr.name = @username AND pe.class = 0 AND pe.[state] = 'G'`
 	var permissions []string
 	permsModel := model.DatabasePermissions{
 		UserName:     username,
