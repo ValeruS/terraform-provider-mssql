@@ -7,7 +7,7 @@ locals {
 }
 
 resource "docker_image" "mssql" {
-  name         = "mcr.microsoft.com/mssql/server"
+  name         = "mcr.microsoft.com/mssql/server:2025-latest"
   keep_locally = true
 }
 
