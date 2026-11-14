@@ -206,6 +206,25 @@ resource "mssql_database_schema_permission" "example" {
   ]
 }
 
+resource "mssql_database_object_permission" "example" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  database       = "master"
+  schema_name    = "dbo"
+  object_name    = "orders"
+  principal_name = "username"
+  permissions    = [
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+  ]
+}
+
 resource "mssql_database_schema" "example_authorization" {
   server {
     host = docker_container.mssql.ip_address

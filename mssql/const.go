@@ -6,6 +6,8 @@ const (
 	principalIdProp        = "principal_id"
 	usernameProp           = "username"
 	principalNameProp      = "principal_name"
+	objectNameProp         = "object_name"
+	columnNameProp         = "column_name"
 	objectIdProp           = "object_id"
 	passwordProp           = "password"
 	passwordWoProp         = "password_wo"

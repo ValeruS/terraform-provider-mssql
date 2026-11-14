@@ -354,6 +354,26 @@ resource "mssql_database_schema_permission" "example" {
   ]
 }
 
+resource "mssql_database_object_permission" "example" {
+  server {
+    host = azurerm_mssql_server.sql_server.fully_qualified_domain_name
+    azure_login {
+      tenant_id     = var.tenant_id
+      client_id     = azuread_service_principal.sa.client_id
+      client_secret = azuread_service_principal_password.sa.value
+    }
+  }
+  database       = "master"
+  schema_name    = "dbo"
+  object_name    = "orders"
+  principal_name = "username"
+  permissions    = [
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+  ]
+}
+
 resource "mssql_database_schema" "example_authorization" {
   server {
     host = azurerm_mssql_server.sql_server.fully_qualified_domain_name
