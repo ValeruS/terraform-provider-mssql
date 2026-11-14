@@ -6,7 +6,6 @@ import (
 	sql2 "database/sql"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 	"text/template"
@@ -112,18 +111,16 @@ func getTestConnector(a map[string]string) (TestConnector, error) {
 	return testConnector{c: connector}, nil
 }
 
-func getTestLoginConnector(a map[string]string) (TestConnector, error) {
+func getTestLoginConnector(a map[string]string, password string) (TestConnector, error) {
 	prefix := serverProp + ".0."
 	connector := &sql.Connector{
 		Host:    a[prefix+"host"],
 		Port:    a[prefix+"port"],
 		Timeout: 60 * time.Second,
 	}
-	if password, ok := a[passwordProp]; ok {
-		connector.Login = &sql.LoginUser{
-			Username: a[loginNameProp],
-			Password: password,
-		}
+	connector.Login = &sql.LoginUser{
+		Username: a[loginNameProp],
+		Password: password,
 	}
 
 	return testConnector{c: connector}, nil
@@ -250,7 +247,9 @@ func templateToString(name, text string, data interface{}) (string, error) {
 	return doc.String(), nil
 }
 
-func testAccImportStateId(resource string, azure bool) func(state *terraform.State) (string, error) {
+// testAccImportStateId returns the ID of resource with query appended, e.g. "azure=true"
+// or "auth=default_chain".
+func testAccImportStateId(resource string, query string) func(state *terraform.State) (string, error) {
 	return func(state *terraform.State) (string, error) {
 		rs, ok := state.RootModule().Resources[resource]
 		if !ok {
@@ -259,7 +258,7 @@ func testAccImportStateId(resource string, azure bool) func(state *terraform.Sta
 		if rs.Primary.ID == "" {
 			return "", fmt.Errorf("no record ID is set")
 		}
-		return rs.Primary.ID + "?azure=" + strconv.FormatBool(azure), nil
+		return rs.Primary.ID + "?" + query, nil
 	}
 }
 

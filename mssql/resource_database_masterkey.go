@@ -5,6 +5,7 @@ import (
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
@@ -21,7 +22,6 @@ func resourceDatabaseMasterkey() *schema.Resource {
 				Type:     schema.TypeList,
 				MaxItems: 1,
 				Required: true,
-				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: getServerSchema(serverProp),
 				},
@@ -33,9 +33,24 @@ func resourceDatabaseMasterkey() *schema.Resource {
 			},
 			passwordProp: {
 				Type:         schema.TypeString,
-				Required:     true,
+				Optional:     true,
 				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
+				ExactlyOneOf: []string{passwordProp, passwordWoProp},
+			},
+			passwordWoProp: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				ValidateFunc:  validate.SQLIdentifierPassword,
+				ConflictsWith: []string{passwordProp},
+				RequiredWith:  []string{passwordWoVersionProp},
+			},
+			passwordWoVersionProp: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				RequiredWith: []string{passwordWoProp},
 			},
 			keynameProp: {
 				Type:     schema.TypeString,
@@ -89,6 +104,16 @@ func resourceDatabaseMasterkeyCreate(ctx context.Context, data *schema.ResourceD
 
 	database := data.Get(databaseProp).(string)
 	password := data.Get(passwordProp).(string)
+	if password == "" {
+		// password_wo is never stored in state, so it is read from the raw configuration
+		wo, diags := data.GetRawConfigAt(cty.GetAttrPath(passwordWoProp))
+		if diags.HasError() {
+			return diags
+		}
+		if wo.IsKnown() && !wo.IsNull() {
+			password = wo.AsString()
+		}
+	}
 
 	connector, err := getDatabaseMasterkeyConnector(meta, data)
 	if err != nil {
@@ -167,12 +192,29 @@ func resourceDatabaseMasterkeyUpdate(ctx context.Context, data *schema.ResourceD
 	logger := loggerFromMeta(meta, "databasemasterkey", "update")
 	logger.Debug().Msgf("Update %s", data.Id())
 
+	// Update also runs when only the server block changes, for example when the
+	// credentials used to connect are rotated. The master key is only regenerated
+	// when password or password_wo_version changes.
+	if !data.HasChange(passwordProp) && !data.HasChange(passwordWoVersionProp) {
+		return resourceDatabaseMasterkeyRead(ctx, data, meta)
+	}
+
 	database := data.Get(databaseProp).(string)
 	password := data.Get(passwordProp).(string)
+	if password == "" {
+		// password_wo is never stored in state, so it is read from the raw configuration
+		wo, diags := data.GetRawConfigAt(cty.GetAttrPath(passwordWoProp))
+		if diags.HasError() {
+			return diags
+		}
+		if wo.IsKnown() && !wo.IsNull() {
+			password = wo.AsString()
+		}
+	}
 
 	// Store old values for all properties that might change
 	oldValues := make(map[string]interface{})
-	for _, prop := range []string{passwordProp} {
+	for _, prop := range []string{passwordProp, passwordWoVersionProp} {
 		if data.HasChange(prop) {
 			oldValue, _ := data.GetChange(prop)
 			oldValues[prop] = oldValue

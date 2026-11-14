@@ -32,15 +32,41 @@ resource "mssql_database_credential" "example" {
 }
 ```
 
+### Using a write-only secret
+
+With Terraform 1.11 or later, `secret_wo` keeps the secret out of the plan and state. Increment
+`secret_wo_version` to apply a new secret.
+
+```hcl
+resource "random_password" "password" {
+  length = 24
+}
+
+resource "mssql_database_credential" "example" {
+  server {
+    host = "example-sql-server.database.windows.net"
+    azure_login {}
+  }
+
+  database          = "example-db"
+  credential_name   = "example-credential-name"
+  identity_name     = "example-identity"
+  secret_wo         = random_password.password.result
+  secret_wo_version = 1
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
-* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below. Changing this forces a new resource to be created.
+* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
 * `credential_name` - (Required) Specifies the name of the database scoped credential being created. Changing this forces a new resource to be created.
 * `identity_name` - (Required) Specifies the name of the account to be used when connecting outside the server. Changing this resource property modifies the existing resource.
-* `secret` - (Optional) Specifies the secret required for outgoing authentication. Changing this resource property modifies the existing resource.
+* `secret` - (Optional) Specifies the secret required for outgoing authentication. The value is stored in the Terraform state. Conflicts with `secret_wo`. Changing this resource property modifies the existing resource.
+* `secret_wo` - (Optional) Specifies the secret required for outgoing authentication, as a [write-only argument](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments): it is never stored in the plan or state, and can take an ephemeral value. Requires Terraform 1.11 or later. Conflicts with `secret`. Must be used together with `secret_wo_version`.
+* `secret_wo_version` - (Optional) Version of the `secret_wo` value. Terraform cannot detect a change to `secret_wo`, so change this value (for example, increment it) to apply a new secret. Required with `secret_wo`.
 
 The `server` block supports the following arguments:
 
@@ -106,9 +132,19 @@ Before importing `mssql_database_credential`, you must to configure the authenti
 
 1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
 2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
+3. Using `azuread_default_chain_auth`, add `auth=default_chain` to the import ID, together with `credential_type=<value>` or `use_oidc=true` when the configuration sets them. The `MSSQL_*` environment variables are not used.
+4. Using `azuread_managed_identity_auth`, add `auth=managed_identity` to the import ID, together with `user_id=<id>` for a user-assigned identity. The `MSSQL_*` environment variables are not used.
+
+The authentication in the import ID must match the `server` block of the configuration, otherwise the next plan shows a change to the `server` block.
 
 After that you can import the SQL Server database scoped credential using the server URL and `credential name`, e.g.
 
 ```shell
 terraform import mssql_database_credential.example 'mssql://example-sql-server.database.windows.net/example-db/credential/credential_name'
+```
+
+Using `azuread_default_chain_auth` with `credential_type = "az_cli"`:
+
+```shell
+terraform import mssql_database_credential.example 'mssql://example-sql-server.database.windows.net/example-db/credential/credential_name?auth=default_chain&credential_type=az_cli'
 ```

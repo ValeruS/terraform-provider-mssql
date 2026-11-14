@@ -60,24 +60,32 @@ func (c *Connector) CreateLogin(ctx context.Context, name, password, sid, defaul
 }
 
 func (c *Connector) UpdateLogin(ctx context.Context, name, password, defaultDatabase, defaultLanguage string) error {
-	cmd := `DECLARE @sql nvarchar(max)
-			SET @sql = 'ALTER LOGIN ' + QuoteName(@name) + ' ' +
-						'WITH PASSWORD = ' + QuoteName(@password, '''')
+	// The password is only changed when one is given; an empty password keeps
+	// the existing one. Nothing is executed when no option has changed.
+	cmd := `DECLARE @options nvarchar(max) = ''
+			IF @password != ''
+				BEGIN
+					SET @options = 'PASSWORD = ' + QuoteName(@password, '''')
+				END
 			IF @@VERSION NOT LIKE 'Microsoft SQL Azure%'
 				BEGIN
 					IF @defaultDatabase = '' SET @defaultDatabase = 'master'
 					IF NOT @defaultDatabase IN (SELECT default_database_name FROM [master].[sys].[sql_logins] WHERE [name] = @name)
 						BEGIN
-							SET @sql = @sql + ', DEFAULT_DATABASE = ' + QuoteName(@defaultDatabase)
+							SET @options = @options + IIF(@options = '', '', ', ') + 'DEFAULT_DATABASE = ' + QuoteName(@defaultDatabase)
 						END
-						DECLARE @language nvarchar(max) = @defaultLanguage
+					DECLARE @language nvarchar(max) = @defaultLanguage
 					IF @language = '' SET @language = (SELECT lang.name FROM [sys].[configurations] c INNER JOIN [sys].[syslanguages] lang ON c.[value] = lang.langid WHERE c.name = 'default language')
 					IF @language != (SELECT default_language_name FROM [master].[sys].[sql_logins] WHERE [name] = @name)
 						BEGIN
-							SET @sql = @sql + ', DEFAULT_LANGUAGE = ' + QuoteName(@language)
+							SET @options = @options + IIF(@options = '', '', ', ') + 'DEFAULT_LANGUAGE = ' + QuoteName(@language)
 						END
-					END
-			EXEC (@sql)`
+				END
+			IF @options != ''
+				BEGIN
+					DECLARE @sql nvarchar(max) = 'ALTER LOGIN ' + QuoteName(@name) + ' WITH ' + @options
+					EXEC (@sql)
+				END`
 	return c.
 		ExecContext(ctx, cmd,
 			sql.Named("name", name),

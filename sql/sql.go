@@ -70,10 +70,12 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 		}
 	}
 
-	if admin, ok := data.GetOk(prefix + "azuread_managed_identity_auth.0"); ok {
-		admin := admin.(map[string]interface{})
-		connector.FedauthMSI = &FedauthMSI{
-			UserID: admin["user_id"].(string),
+	// GetOk reports an empty azuread_managed_identity_auth {} block (system-assigned
+	// identity) as not set, so the block is detected by its length instead.
+	if msiList, ok := data.Get(prefix + "azuread_managed_identity_auth").([]interface{}); ok && len(msiList) > 0 {
+		connector.FedauthMSI = &FedauthMSI{}
+		if msi, ok := msiList[0].(map[string]interface{}); ok {
+			connector.FedauthMSI.UserID, _ = msi["user_id"].(string)
 		}
 	}
 

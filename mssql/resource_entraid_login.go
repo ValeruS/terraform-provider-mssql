@@ -15,6 +15,7 @@ func resourceEntraIDLogin() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceEntraIDLoginCreate,
 		ReadContext:   resourceEntraIDLoginRead,
+		UpdateContext: resourceEntraIDLoginUpdate,
 		DeleteContext: resourceEntraIDLoginDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceEntraIDLoginImport,
@@ -24,7 +25,6 @@ func resourceEntraIDLogin() *schema.Resource {
 				Type:     schema.TypeList,
 				MaxItems: 1,
 				Required: true,
-				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: getServerSchema(serverProp),
 				},
@@ -129,6 +129,13 @@ func resourceEntraIDLoginRead(ctx context.Context, data *schema.ResourceData, me
 	}
 
 	return nil
+}
+
+// Only the server block can change in place, for example when the credentials used to
+// connect are rotated. The login itself has nothing to update, so the new connection
+// details are only saved to state.
+func resourceEntraIDLoginUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return resourceEntraIDLoginRead(ctx, data, meta)
 }
 
 func resourceEntraIDLoginDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {

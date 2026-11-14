@@ -25,7 +25,6 @@ func resourceDatabasePermissions() *schema.Resource {
 				Type:     schema.TypeList,
 				MaxItems: 1,
 				Required: true,
-				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: getServerSchema(serverProp),
 				},

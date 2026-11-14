@@ -6,6 +6,7 @@ import (
 
 	"github.com/ValeruS/terraform-provider-mssql/mssql/model"
 	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
@@ -37,9 +38,24 @@ func resourceLogin() *schema.Resource {
 			},
 			passwordProp: {
 				Type:         schema.TypeString,
-				Required:     true,
+				Optional:     true,
 				Sensitive:    true,
 				ValidateFunc: validate.SQLIdentifierPassword,
+				ExactlyOneOf: []string{passwordProp, passwordWoProp},
+			},
+			passwordWoProp: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				WriteOnly:     true,
+				ValidateFunc:  validate.SQLIdentifierPassword,
+				ConflictsWith: []string{passwordProp},
+				RequiredWith:  []string{passwordWoVersionProp},
+			},
+			passwordWoVersionProp: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				RequiredWith: []string{passwordWoProp},
 			},
 			sidStrProp: {
 				Type:     schema.TypeString,
@@ -89,6 +105,16 @@ func resourceLoginCreate(ctx context.Context, data *schema.ResourceData, meta in
 
 	loginName := data.Get(loginNameProp).(string)
 	password := data.Get(passwordProp).(string)
+	if password == "" {
+		// password_wo is never stored in state, so it is read from the raw configuration
+		wo, diags := data.GetRawConfigAt(cty.GetAttrPath(passwordWoProp))
+		if diags.HasError() {
+			return diags
+		}
+		if wo.IsKnown() && !wo.IsNull() {
+			password = wo.AsString()
+		}
+	}
 	sid := data.Get(sidStrProp).(string)
 	defaultDatabase := data.Get(defaultDatabaseProp).(string)
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
@@ -150,13 +176,28 @@ func resourceLoginUpdate(ctx context.Context, data *schema.ResourceData, meta in
 	logger.Debug().Msgf("Update %s", data.Id())
 
 	loginName := data.Get(loginNameProp).(string)
-	password := data.Get(passwordProp).(string)
+	// Only include password in the update if it has changed. For password_wo
+	// the change is signalled by password_wo_version, as the value itself is
+	// never stored in state. An empty password keeps the existing one.
+	password := ""
+	if data.HasChange(passwordProp) || data.HasChange(passwordWoVersionProp) {
+		password = data.Get(passwordProp).(string)
+		if password == "" {
+			wo, diags := data.GetRawConfigAt(cty.GetAttrPath(passwordWoProp))
+			if diags.HasError() {
+				return diags
+			}
+			if wo.IsKnown() && !wo.IsNull() {
+				password = wo.AsString()
+			}
+		}
+	}
 	defaultDatabase := data.Get(defaultDatabaseProp).(string)
 	defaultLanguage := data.Get(defaultLanguageProp).(string)
 
 	// Store old values for all properties that might change
 	oldValues := make(map[string]interface{})
-	for _, prop := range []string{passwordProp, defaultDatabaseProp, defaultLanguageProp} {
+	for _, prop := range []string{passwordProp, passwordWoVersionProp, defaultDatabaseProp, defaultLanguageProp} {
 		if data.HasChange(prop) {
 			oldValue, _ := data.GetChange(prop)
 			oldValues[prop] = oldValue

@@ -2,9 +2,12 @@ package mssql
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -12,6 +15,21 @@ import (
 )
 
 const DefaultPort = "1433"
+
+// Values of the auth query parameter of an import ID.
+const (
+	importAuthDefaultChain    = "default_chain"
+	importAuthManagedIdentity = "managed_identity"
+)
+
+// defaultChainCredentialTypes are the valid values of azuread_default_chain_auth.credential_type.
+var defaultChainCredentialTypes = []string{
+	"az_cli",
+	"azure_developer_cli",
+	"azure_pipelines",
+	"environment",
+	"workload_identity",
+}
 
 func getServerSchema(prefix string) map[string]*schema.Schema {
 	if len(prefix) > 0 {
@@ -102,13 +120,7 @@ func getServerSchema(prefix string) map[string]*schema.Schema {
 						Type:          schema.TypeString,
 						Optional:      true,
 						ConflictsWith: []string{prefix + "azuread_default_chain_auth.0.use_oidc"},
-						ValidateFunc: validation.StringInSlice([]string{
-							"az_cli",
-							"azure_developer_cli",
-							"azure_pipelines",
-							"environment",
-							"workload_identity",
-						}, false),
+						ValidateFunc:  validation.StringInSlice(defaultChainCredentialTypes, false),
 					},
 				},
 			},
@@ -152,6 +164,21 @@ func serverFromId(id string) ([]map[string]interface{}, *url.URL, error) {
 
 	values := u.Query()
 
+	if values.Has("auth") {
+		server, err := serverFromAuth(values)
+		if err != nil {
+			return nil, nil, err
+		}
+		server["host"] = host
+		server["port"] = port
+		return []map[string]interface{}{server}, u, nil
+	}
+	for _, key := range []string{"credential_type", "use_oidc", "user_id"} {
+		if values.Has(key) {
+			return nil, nil, fmt.Errorf("%s in the import ID requires the auth parameter", key)
+		}
+	}
+
 	login, loginInValues := getLogin(values)
 	azureLogin, azureInValues := getAzureLogin(values)
 	if login == nil && azureLogin == nil {
@@ -179,6 +206,57 @@ func serverFromId(id string) ([]map[string]interface{}, *url.URL, error) {
 		"login":       login,
 		"azure_login": azureLogin,
 	}}, u, nil
+}
+
+// serverFromAuth builds the authentication block of the server block from the auth
+// parameter of an import ID. The import ID is the only input of an importer, so it
+// must describe the same block as the configuration, or the next plan shows a diff.
+func serverFromAuth(values url.Values) (map[string]interface{}, error) {
+	for _, key := range []string{"username", "password", "tenant_id", "client_id", "client_secret", "azure"} {
+		if values.Has(key) {
+			return nil, fmt.Errorf("%s cannot be used with auth in the import ID", key)
+		}
+	}
+
+	switch auth := values.Get("auth"); auth {
+	case importAuthDefaultChain:
+		if values.Has("user_id") {
+			return nil, fmt.Errorf("user_id cannot be used with auth=%s in the import ID", auth)
+		}
+		credentialType := values.Get("credential_type")
+		if values.Has("credential_type") && !slices.Contains(defaultChainCredentialTypes, credentialType) {
+			return nil, fmt.Errorf("invalid credential_type %q in the import ID, expected one of %s", credentialType, strings.Join(defaultChainCredentialTypes, ", "))
+		}
+		useOidc := false
+		if values.Has("use_oidc") {
+			var err error
+			if useOidc, err = strconv.ParseBool(values.Get("use_oidc")); err != nil {
+				return nil, fmt.Errorf("invalid use_oidc %q in the import ID", values.Get("use_oidc"))
+			}
+		}
+		if useOidc && credentialType != "" {
+			return nil, errors.New("use_oidc and credential_type cannot be used together in the import ID")
+		}
+		return map[string]interface{}{
+			"azuread_default_chain_auth": []map[string]interface{}{{
+				"use_oidc":        useOidc,
+				"credential_type": credentialType,
+			}},
+		}, nil
+	case importAuthManagedIdentity:
+		for _, key := range []string{"credential_type", "use_oidc"} {
+			if values.Has(key) {
+				return nil, fmt.Errorf("%s cannot be used with auth=%s in the import ID", key, auth)
+			}
+		}
+		return map[string]interface{}{
+			"azuread_managed_identity_auth": []map[string]interface{}{{
+				"user_id": values.Get("user_id"),
+			}},
+		}, nil
+	default:
+		return nil, fmt.Errorf("invalid auth %q in the import ID, expected %s or %s", auth, importAuthDefaultChain, importAuthManagedIdentity)
+	}
 }
 
 func getLogin(values url.Values) ([]map[string]interface{}, bool) {

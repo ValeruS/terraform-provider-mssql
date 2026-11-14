@@ -65,6 +65,30 @@ resource "mssql_user" "example_group" {
 }
 ```
 
+### Contained database user with a write-only password
+
+With Terraform 1.11 or later, `password_wo` keeps the password out of the plan and state. Increment
+`password_wo_version` to apply a new password.
+
+```hcl
+resource "random_password" "password" {
+  length = 24
+}
+
+resource "mssql_user" "example" {
+  server {
+    host = "example-sql-server.database.windows.net"
+    azure_login {}
+  }
+
+  database            = "my-database"
+  username            = "app_user"
+  password_wo         = random_password.password.result
+  password_wo_version = 1
+  roles               = ["db_datareader"]
+}
+```
+
 > Note that in order to create an external user referencing an Azure AD entity (user, application), the Azure SQL Server needs to be a member of an Azure AD group assigned the Azure AD role `Directory Readers`. If it is not possible to give the Azure SQL Server this role (through the group), you can use the `object id` of the Azure AD entity instead.
 
 ## Argument Reference
@@ -74,15 +98,17 @@ The following arguments are supported:
 * `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `database` - (Optional) The user will be created in this database. Defaults to `master`. Changing this forces a new resource to be created.
 * `username` - (Required) The name of the database user. Changing this forces a new resource to be created.
-* `password` - (Optional) The password of the database user. Conflicts with the `login_name` argument. Changing this resource property modifies the existing resource.
-* `login_name` - (Optional) The login name of the database user. This must refer to an existing SQL Server login name. Conflicts with the `password` argument. Changing this forces a new resource to be created.
+* `password` - (Optional) The password of the database user. The value is stored in the Terraform state. Conflicts with the `login_name`, `object_id` and `password_wo` arguments. Changing this resource property modifies the existing resource.
+* `password_wo` - (Optional) The password of the database user, as a [write-only argument](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments): it is never stored in the plan or state, and can take an ephemeral value. Requires Terraform 1.11 or later. Conflicts with the `password`, `login_name` and `object_id` arguments. Must be used together with `password_wo_version`.
+* `password_wo_version` - (Optional) Version of the `password_wo` value. Terraform cannot detect a change to `password_wo`, so change this value (for example, increment it) to apply a new password. Required with `password_wo`.
+* `login_name` - (Optional) The login name of the database user. This must refer to an existing SQL Server login name. Conflicts with the `password` and `password_wo` arguments. Changing this forces a new resource to be created.
 * `object_id` - (Optional) The Microsoft Entra Object ID (Azure AD Object ID) of the user, group, or service principal. Required when creating a user mapped to an Azure AD identity. This can be used instead of looking up the Azure AD identity by username. Changing this forces a new resource to be created.
 * `type` - (Optional) Specifies the type of a Microsoft Entra principal. `E` indicates the principal is a user or a service principal (an application or a managed identity). `X` indicates the principal is a group. Can be used with `object_id` to specify the type of Azure AD entity. Changing this forces a new resource to be created.
 * `default_schema` - (Optional) Specifies the first schema that will be searched by the server when it resolves the names of objects for this database user. Defaults to `dbo`.
 * `default_language` - (Optional) Specifies the default language for the user. If no default language is specified, the default language for the user will bed the default language of the database. This argument does not apply to Azure SQL Database or if the user is not a contained database user.
 * `roles` - (Optional) List of database roles the user has. Defaults to none.
 
--> If only `username` is specified, an external user is created. The username must be in a format appropriate to the external user created, and will vary between SQL Server types. If `password` is specified, a user that authenticates at the database is created, and if `login_name` is specified, a user that authenticates at the server is created.
+-> If only `username` is specified, an external user is created. The username must be in a format appropriate to the external user created, and will vary between SQL Server types. If `password` or `password_wo` is specified, a user that authenticates at the database is created, and if `login_name` is specified, a user that authenticates at the server is created.
 
 The `server` block supports the following arguments:
 
@@ -147,9 +173,19 @@ Before importing `mssql_user`, you must to configure the authentication to your 
 
 1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
 2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
+3. Using `azuread_default_chain_auth`, add `auth=default_chain` to the import ID, together with `credential_type=<value>` or `use_oidc=true` when the configuration sets them. The `MSSQL_*` environment variables are not used.
+4. Using `azuread_managed_identity_auth`, add `auth=managed_identity` to the import ID, together with `user_id=<id>` for a user-assigned identity. The `MSSQL_*` environment variables are not used.
+
+The authentication in the import ID must match the `server` block of the configuration, otherwise the next plan shows a change to the `server` block.
 
 After that you can import the SQL Server database user using the server URL and `login name`, e.g.
 
 ```shell
 terraform import mssql_user.example 'mssql://example-sql-server.database.windows.net/example-db/user/username'
+```
+
+Using `azuread_default_chain_auth` with `credential_type = "az_cli"`:
+
+```shell
+terraform import mssql_user.example 'mssql://example-sql-server.database.windows.net/example-db/user/username?auth=default_chain&credential_type=az_cli'
 ```

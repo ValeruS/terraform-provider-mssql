@@ -28,7 +28,7 @@ func TestAccDatabaseSQLScript_Local_BasicImport(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"sqlscript"},
-				ImportStateIdFunc:       testAccImportStateId("mssql_database_sqlscript.test_import", false),
+				ImportStateIdFunc:       testAccImportStateId("mssql_database_sqlscript.test_import", "azure=false"),
 			},
 		},
 	})

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0]
+
+### Added
+
+- Import with `azuread_default_chain_auth` and `azuread_managed_identity_auth`: add `auth=default_chain` (with optional
+  `credential_type` or `use_oidc`) or `auth=managed_identity` (with optional `user_id`) to the import ID, so the
+  imported `server` block matches the configuration
+- `password_wo` and `password_wo_version` arguments on `mssql_login`, `mssql_user` and `mssql_database_masterkey`: a
+  write-only password that is never stored in the plan or state (requires Terraform 1.11 or later); increment
+  `password_wo_version` to apply a new password. On `mssql_login` and `mssql_database_masterkey`, exactly one of
+  `password` and `password_wo` must be specified; `mssql_login` sets the password on update only when `password` or
+  `password_wo_version` changes
+- `secret_wo` and `secret_wo_version` arguments on `mssql_database_credential`: a write-only secret that is never stored
+  in the plan or state (requires Terraform 1.11 or later); increment `secret_wo_version` to apply a new secret
+
+### Changed
+
+- Make minimum terraform version 1.11, required for the write-only arguments
+
+### Fixed
+
+- An empty `azuread_managed_identity_auth {}` block now uses the system-assigned managed identity; previously it was
+  ignored and the connection fell back to `ActiveDirectoryDefault`, which could authenticate as a different identity
+  (for example from `AZURE_*` environment variables or `az login`)
+- `server` is no longer marked `ForceNew` on `mssql_azure_external_datasource`, `mssql_database_credential`,
+  `mssql_database_masterkey`, `mssql_database_permissions` and `mssql_entraid_login`, as on the other resources. It had
+  no effect: changing `host` or `port` still forces a new resource, and the other `server` attributes are updated in place
+
 ## [0.8.0]
 
 ### Added

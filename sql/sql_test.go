@@ -464,6 +464,34 @@ func TestGetConnector_ManagedIdentity(t *testing.T) {
 	}
 }
 
+func TestGetConnector_ManagedIdentity_SystemAssigned(t *testing.T) {
+	res := serverSchemaResource()
+	raw := map[string]interface{}{
+		"server": []interface{}{
+			map[string]interface{}{
+				"host":                          "example.database.windows.net",
+				"port":                          "1433",
+				"azuread_managed_identity_auth": []interface{}{map[string]interface{}{}},
+			},
+		},
+	}
+
+	d := schema.TestResourceDataRaw(t, res.Schema, raw)
+	f := new(factory)
+	iface, err := f.GetConnector("server", d)
+	if err != nil {
+		t.Fatalf("GetConnector returned error: %v", err)
+	}
+
+	c := iface.(*Connector)
+	if c.FedauthMSI == nil {
+		t.Fatal("FedauthMSI should be set for an empty azuread_managed_identity_auth block")
+	}
+	if c.FedauthMSI.UserID != "" {
+		t.Errorf("FedauthMSI.UserID: got %q, want empty", c.FedauthMSI.UserID)
+	}
+}
+
 // serverSchemaResource returns a Resource with the standard server block schema used by GetConnector.
 func serverSchemaResource() *schema.Resource {
 	return &schema.Resource{
