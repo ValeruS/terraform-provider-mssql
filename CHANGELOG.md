@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mssql_login`: an update sets the password only when `password` or `password_wo_version` changes, instead of
   resetting it on every update (for example when only `default_database` or `default_language` changes)
 
+### Fixed
+
+- `mssql_database_masterkey`: a change of the `server` block only, for example rotated credentials in the `MSSQL_*`
+  environment variables, no longer regenerates the master key; it is regenerated only when `password` or
+  `password_wo_version` changes
+
 ## [0.8.0]
 
 ### Added

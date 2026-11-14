@@ -193,9 +193,14 @@ func resourceDatabaseMasterkeyUpdate(ctx context.Context, data *schema.ResourceD
 	logger := loggerFromMeta(meta, "databasemasterkey", "update")
 	logger.Debug().Msgf("Update %s", data.Id())
 
+	// Update also runs when only the server block changes, for example when the
+	// credentials used to connect are rotated. The master key is only regenerated
+	// when password or password_wo_version changes.
+	if !data.HasChange(passwordProp) && !data.HasChange(passwordWoVersionProp) {
+		return resourceDatabaseMasterkeyRead(ctx, data, meta)
+	}
+
 	database := data.Get(databaseProp).(string)
-	// Update only runs when password or password_wo_version changes, as all
-	// other arguments force a new resource.
 	password := data.Get(passwordProp).(string)
 	if password == "" {
 		// password_wo is never stored in state, so it is read from the raw configuration

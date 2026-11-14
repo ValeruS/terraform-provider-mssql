@@ -3,6 +3,7 @@ package mssql
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -150,6 +151,44 @@ func TestAccDatabaseMasterkey_Azure_Basic_update(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseMasterkey_Local_Update_Server(t *testing.T) {
+	keyGuid := ""
+	// SQL Server logins are case-insensitive, so this changes only the server block
+	// in state while still connecting as the same login.
+	username := strings.ToUpper(os.Getenv("MSSQL_USERNAME"))
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckDatabaseMasterkeyDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckDatabaseMasterkey(t, "server_update", "login", map[string]interface{}{"database": "master", "password": "V3ryS3cretP@asswd"}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDatabaseMasterkeyExists("mssql_database_masterkey.server_update"),
+					resource.TestCheckResourceAttrWith("mssql_database_masterkey.server_update", "key_guid", func(v string) error {
+						keyGuid = v
+						return nil
+					}),
+				),
+			},
+			{
+				// Only the server block changes, so the master key must not be regenerated
+				Config: testAccCheckDatabaseMasterkey(t, "server_update", "login", map[string]interface{}{"database": "master", "password": "V3ryS3cretP@asswd", "server_username": username}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("mssql_database_masterkey.server_update", "server.0.login.0.username", username),
+					resource.TestCheckResourceAttrWith("mssql_database_masterkey.server_update", "key_guid", func(v string) error {
+						if v != keyGuid {
+							return fmt.Errorf("expected key_guid to stay [%s], got [%s]", keyGuid, v)
+						}
+						return nil
+					}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseMasterkey_Local_PasswordWo(t *testing.T) {
 	keyGuid := ""
 	resource.Test(t, resource.TestCase{
@@ -257,7 +296,9 @@ func testAccCheckDatabaseMasterkey(t *testing.T, name string, login string, data
 	text := `resource "mssql_database_masterkey" "{{ .name }}" {
 				server {
 					host = "{{ .host }}"
-					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {}{{ end }}
+					{{if eq .login "fedauth"}}azuread_default_chain_auth {}{{ else if eq .login "msi"}}azuread_managed_identity_auth {}{{ else if eq .login "azure" }}azure_login {}{{ else }}login {
+						{{ with .server_username }}username = "{{ . }}"{{ end }}
+					}{{ end }}
 				}
 				database = "{{ .database }}"
 				{{ with .password }}password = "{{ . }}"{{ end }}
