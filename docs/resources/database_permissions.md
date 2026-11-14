@@ -25,7 +25,7 @@ resource "mssql_database_permissions" "example" {
 
 The following arguments are supported:
 
-* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below. Changing this forces a new resource to be created.
+* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
 * `username` - (Required) The name of the database user. Changing this forces a new resource to be created.
 * `permissions` - (Required) List of permissions to grant to the user. Changing this resource property modifies the existing resource.

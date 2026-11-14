@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `mssql_entraid_login`: a change of the `server` block, for example rotated credentials in the `MSSQL_*` environment
+  variables, failed to apply with `doesn't support update`; it is now saved to state without changing the login
+- `server` is no longer marked `ForceNew` on `mssql_azure_external_datasource`, `mssql_database_credential`,
+  `mssql_database_masterkey`, `mssql_database_permissions` and `mssql_entraid_login`, as on the other resources. It had
+  no effect: changing `host` or `port` still forces a new resource, and the other `server` attributes are updated in
+  place
+
 ## [0.8.0]
 
 ### Added

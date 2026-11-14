@@ -20,7 +20,7 @@ resource "mssql_database_masterkey" "example" {
 
 The following arguments are supported:
 
-* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below. Changing this forces a new resource to be created.
+* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
 * `password` - (Required) The password that is used to encrypt the master key in the database. Changing this resource property modifies the existing resource.
 
