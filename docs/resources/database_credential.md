@@ -36,7 +36,7 @@ resource "mssql_database_credential" "example" {
 
 The following arguments are supported:
 
-* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below. Changing this forces a new resource to be created.
+* `server` - (Required) Server and login details for the SQL Server. The attributes supported in the `server` block is detailed below.
 * `database` - (Required) The name of the database to operate on. Changing this forces a new resource to be created.
 * `credential_name` - (Required) Specifies the name of the database scoped credential being created. Changing this forces a new resource to be created.
 * `identity_name` - (Required) Specifies the name of the account to be used when connecting outside the server. Changing this resource property modifies the existing resource.
