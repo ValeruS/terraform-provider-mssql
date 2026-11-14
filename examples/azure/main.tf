@@ -335,6 +335,25 @@ resource "mssql_database_schema" "example" {
   schema_name = "testschema"
 }
 
+resource "mssql_database_schema_permission" "example" {
+  server {
+    host = azurerm_mssql_server.sql_server.fully_qualified_domain_name
+    azure_login {
+      tenant_id     = var.tenant_id
+      client_id     = azuread_service_principal.sa.client_id
+      client_secret = azuread_service_principal_password.sa.value
+    }
+  }
+  database       = "master"
+  schema_name    = mssql_database_schema.example.schema_name
+  principal_name = "username"
+  permissions    = [
+    "SELECT",
+    "INSERT",
+    "EXECUTE",
+  ]
+}
+
 resource "mssql_database_schema" "example_authorization" {
   server {
     host = azurerm_mssql_server.sql_server.fully_qualified_domain_name
