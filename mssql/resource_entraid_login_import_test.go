@@ -26,7 +26,7 @@ func TestAccEntraIDLogin_Azure_BasicImport(t *testing.T) {
 				ResourceName:      "mssql_entraid_login.test_import",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: testAccImportStateId("mssql_entraid_login.test_import", true),
+				ImportStateIdFunc: testAccImportStateId("mssql_entraid_login.test_import", "azure=true"),
 			},
 		},
 	})

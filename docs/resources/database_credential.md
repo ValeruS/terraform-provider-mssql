@@ -106,9 +106,19 @@ Before importing `mssql_database_credential`, you must to configure the authenti
 
 1. Using Azure AD authentication, you must set the following environment variables: `MSSQL_TENANT_ID`, `MSSQL_CLIENT_ID` and `MSSQL_CLIENT_SECRET`.
 2. Using SQL authentication, you must set the following environment variables: `MSSQL_USERNAME` and `MSSQL_PASSWORD`.
+3. Using `azuread_default_chain_auth`, add `auth=default_chain` to the import ID, together with `credential_type=<value>` or `use_oidc=true` when the configuration sets them. The `MSSQL_*` environment variables are not used.
+4. Using `azuread_managed_identity_auth`, add `auth=managed_identity` to the import ID, together with `user_id=<id>` for a user-assigned identity. The `MSSQL_*` environment variables are not used.
+
+The authentication in the import ID must match the `server` block of the configuration, otherwise the next plan shows a change to the `server` block.
 
 After that you can import the SQL Server database scoped credential using the server URL and `credential name`, e.g.
 
 ```shell
 terraform import mssql_database_credential.example 'mssql://example-sql-server.database.windows.net/example-db/credential/credential_name'
+```
+
+Using `azuread_default_chain_auth` with `credential_type = "az_cli"`:
+
+```shell
+terraform import mssql_database_credential.example 'mssql://example-sql-server.database.windows.net/example-db/credential/credential_name?auth=default_chain&credential_type=az_cli'
 ```
