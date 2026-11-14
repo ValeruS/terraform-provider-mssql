@@ -3,6 +3,8 @@ package mssql
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -23,6 +25,53 @@ func TestAccEntraIDLogin_Azure_Basic(t *testing.T) {
 					resource.TestCheckResourceAttr("mssql_entraid_login.basic", "login_name", clientUser),
 					resource.TestCheckResourceAttrSet("mssql_entraid_login.basic", "principal_id"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccEntraIDLogin_Azure_ObjectId(t *testing.T) {
+	clientUser := os.Getenv("TF_ACC_AZURE_USER_CLIENT_USER")
+	objectId := os.Getenv("TF_ACC_AZURE_USER_CLIENT_OBJECTID")
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviders,
+		CheckDestroy:      func(state *terraform.State) error { return testAccCheckEntraIDLoginDestroy(state) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckEntraIDLogin(t, "object_id", "azure", map[string]interface{}{"login_name": clientUser, "object_id": objectId}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckEntraIDLoginExists("mssql_entraid_login.object_id"),
+					resource.TestCheckResourceAttr("mssql_entraid_login.object_id", "login_name", clientUser),
+					resource.TestCheckResourceAttr("mssql_entraid_login.object_id", "object_id", objectId),
+					// For a service principal, the SID is derived from its client ID, not from
+					// the object ID used to look it up: the GUID in SQL Server byte order.
+					resource.TestCheckResourceAttrWith("mssql_entraid_login.object_id", "sid", func(sid string) error {
+						g := strings.ReplaceAll(os.Getenv("TF_ACC_AZURE_USER_CLIENT_ID"), "-", "")
+						if len(g) != 32 {
+							return fmt.Errorf("invalid TF_ACC_AZURE_USER_CLIENT_ID")
+						}
+						want := "0x" + g[6:8] + g[4:6] + g[2:4] + g[0:2] + g[10:12] + g[8:10] + g[14:16] + g[12:14] + g[16:]
+						if !strings.EqualFold(sid, want) {
+							return fmt.Errorf("expected sid %s from the client ID, got %s", want, sid)
+						}
+						return nil
+					}),
+				),
+			},
+		},
+	})
+}
+
+func TestAccEntraIDLogin_Local_ObjectId_Validate(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IsUnitTest:        runLocalAccTests,
+		ProviderFactories: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccCheckEntraIDLogin(t, "object_id_validate", "login", map[string]interface{}{"login_name": "entraid_validate", "object_id": "not-a-guid"}),
+				ExpectError: regexp.MustCompile(`expected "object_id" to be a valid UUID`),
 			},
 		},
 	})

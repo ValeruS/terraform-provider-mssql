@@ -25,7 +25,7 @@ func TestAccLogin_Local_BasicImport(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"password"},
-				ImportStateIdFunc:       testAccImportStateId("mssql_login.test_import", "azure=false"),
+				ImportStateIdFunc:       testAccImportStateId("mssql_login.test_import", "", "azure=false"),
 			},
 		},
 	})

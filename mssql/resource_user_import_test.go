@@ -24,7 +24,7 @@ func TestAccUser_Local_BasicImport(t *testing.T) {
 				ResourceName:      "mssql_user.test_import",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: testAccImportStateId("mssql_user.test_import", "azure=false"),
+				ImportStateIdFunc: testAccImportStateId("mssql_user.test_import", "", "azure=false"),
 			},
 		},
 	})
@@ -49,7 +49,7 @@ func TestAccUser_AzureadChainEnvironment_BasicImport(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"password"},
-				ImportStateIdFunc:       testAccImportStateId("mssql_user.test_import", "auth=default_chain&credential_type=environment"),
+				ImportStateIdFunc:       testAccImportStateId("mssql_user.test_import", "", "auth=default_chain&credential_type=environment"),
 			},
 		},
 	})

@@ -8,6 +8,7 @@ import (
 	"github.com/ValeruS/terraform-provider-mssql/mssql/validate"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/pkg/errors"
 )
 
@@ -36,9 +37,10 @@ func resourceEntraIDLogin() *schema.Resource {
 				ValidateFunc: validate.SQLIdentifier,
 			},
 			objectIdProp: {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.IsUUID,
 			},
 			sidStrProp: {
 				Type:     schema.TypeString,
@@ -172,12 +174,23 @@ func resourceEntraIDLoginImport(ctx context.Context, data *schema.ResourceData, 
 		return nil, err
 	}
 
+	// /login/<login_name> or /login/<login_name>/<object_id>
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 3 {
+	if len(parts) != 3 && len(parts) != 4 {
 		return nil, errors.New("invalid ID")
 	}
 	if err = data.Set(loginNameProp, parts[2]); err != nil {
 		return nil, err
+	}
+	// object_id cannot be read from the server: the SID of a service principal is
+	// derived from its client ID, so it is taken from the import ID.
+	if len(parts) == 4 {
+		if _, errs := validation.IsUUID(parts[3], objectIdProp); len(errs) > 0 {
+			return nil, errs[0]
+		}
+		if err = data.Set(objectIdProp, parts[3]); err != nil {
+			return nil, err
+		}
 	}
 
 	data.SetId(getLoginID(data))

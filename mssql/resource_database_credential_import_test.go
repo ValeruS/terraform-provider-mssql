@@ -24,7 +24,7 @@ func TestAccDatabaseCredential_Azure_BasicImport(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"secret"},
-				ImportStateIdFunc:       testAccImportStateId("mssql_database_credential.test_import", "azure=true"),
+				ImportStateIdFunc:       testAccImportStateId("mssql_database_credential.test_import", "", "azure=true"),
 			},
 		},
 	})
