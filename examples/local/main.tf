@@ -6,8 +6,8 @@ terraform {
       version = "~> 3.0"
     }
     mssql = {
-      source  = "valerus/mssql"
-      version = "~> 0.2"
+      source  = "ValeruS/mssql"
+      version = "~> 0.10"
     }
     random = {
       source  = "hashicorp/random"

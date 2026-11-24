@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0]
+
 ### Added
 
 - `mssql_database_schema_permission` resource and data source: grant and revoke permissions on a schema for a database
