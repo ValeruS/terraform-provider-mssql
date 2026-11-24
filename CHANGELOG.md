@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2]
+
+### Fixed
+
+- Changing the `server` block from `login` or `azure_login` to another authentication method now connects with the new
+  method on update; previously the update still used the removed block, with empty credentials, and failed
+
 ## [0.9.1]
 
 ### Fixed

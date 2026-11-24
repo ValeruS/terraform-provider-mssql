@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ValeruS/terraform-provider-mssql/sql"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
@@ -298,4 +300,179 @@ func TestServerBlockCredentialsChangeIsInPlace_ServerRoleMember(t *testing.T) {
 
 func TestServerBlockCredentialsChangeIsInPlace_User(t *testing.T) {
 	testServerBlockCredentialsChangeIsInPlace(t, "mssql_user")
+}
+
+// testServerBlockAuthChangeUsesNewMethod checks that an update which replaces the
+// authentication block named from in the server block with the block named to
+// connects with the new block, not with the removed one.
+func testServerBlockAuthChangeUsesNewMethod(t *testing.T, from, to string) {
+	blocks := map[string]struct {
+		state  map[string]string
+		config map[string]interface{}
+		want   string
+	}{
+		"login": {
+			state:  map[string]string{"server.0.login.#": "1", "server.0.login.0.username": "sa", "server.0.login.0.password": "p"},
+			config: map[string]interface{}{"login": []interface{}{map[string]interface{}{"username": "sa", "password": "p"}}},
+			want:   "login",
+		},
+		"azure_login": {
+			state:  map[string]string{"server.0.azure_login.#": "1", "server.0.azure_login.0.tenant_id": "t", "server.0.azure_login.0.client_id": "c", "server.0.azure_login.0.client_secret": "s"},
+			config: map[string]interface{}{"azure_login": []interface{}{map[string]interface{}{"tenant_id": "t", "client_id": "c", "client_secret": "s"}}},
+			want:   "azure_login",
+		},
+		"azuread_default_chain_auth": {
+			state:  map[string]string{"server.0.azuread_default_chain_auth.#": "1", "server.0.azuread_default_chain_auth.0.use_oidc": "false", "server.0.azuread_default_chain_auth.0.credential_type": ""},
+			config: map[string]interface{}{"azuread_default_chain_auth": []interface{}{map[string]interface{}{}}},
+			want:   "default_chain",
+		},
+		"azuread_default_chain_auth_az_cli": {
+			state:  map[string]string{"server.0.azuread_default_chain_auth.#": "1", "server.0.azuread_default_chain_auth.0.use_oidc": "false", "server.0.azuread_default_chain_auth.0.credential_type": "az_cli"},
+			config: map[string]interface{}{"azuread_default_chain_auth": []interface{}{map[string]interface{}{"credential_type": "az_cli"}}},
+			want:   "credential_type",
+		},
+		"azuread_managed_identity_auth": {
+			state:  map[string]string{"server.0.azuread_managed_identity_auth.#": "1", "server.0.azuread_managed_identity_auth.0.user_id": ""},
+			config: map[string]interface{}{"azuread_managed_identity_auth": []interface{}{map[string]interface{}{}}},
+			want:   "managed_identity",
+		},
+	}
+	fromBlock, ok := blocks[from]
+	if !ok {
+		t.Fatalf("unknown block %s", from)
+	}
+	toBlock, ok := blocks[to]
+	if !ok {
+		t.Fatalf("unknown block %s", to)
+	}
+
+	var got string
+	r := &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			serverProp: {Type: schema.TypeList, MaxItems: 1, Required: true, Elem: &schema.Resource{Schema: getServerSchema(serverProp)}},
+		},
+		CreateContext: func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics { return nil },
+		ReadContext:   func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics { return nil },
+		DeleteContext: func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics { return nil },
+		UpdateContext: func(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
+			c, err := sql.GetFactory().GetConnector(serverProp, d)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			connector := c.(*sql.Connector)
+			switch {
+			case connector.Login != nil:
+				got = "login"
+			case connector.AzureLogin != nil:
+				got = "azure_login"
+			case connector.FedauthMSI != nil:
+				got = "managed_identity"
+			case connector.FedauthCredential != "":
+				got = "credential_type"
+			default:
+				got = "default_chain"
+			}
+			return nil
+		},
+	}
+
+	attributes := map[string]string{"id": "x", "server.#": "1", "server.0.host": "h", "server.0.port": "1433"}
+	for k, v := range fromBlock.state {
+		attributes[k] = v
+	}
+	server := map[string]interface{}{"host": "h"}
+	for k, v := range toBlock.config {
+		server[k] = v
+	}
+	state := &terraform.InstanceState{ID: "x", Attributes: attributes}
+	diff, err := r.SimpleDiff(context.Background(), state, terraform.NewResourceConfigRaw(map[string]interface{}{serverProp: []interface{}{server}}), nil)
+	if err != nil {
+		t.Fatalf("diff returned error: %v", err)
+	}
+	if _, diags := r.Apply(context.Background(), state, diff, nil); diags.HasError() {
+		t.Fatalf("apply returned error: %v", diags)
+	}
+	if got != toBlock.want {
+		t.Errorf("update connected with %s, want %s", got, toBlock.want)
+	}
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_LoginToAzureLogin(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "login", "azure_login")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_LoginToDefaultChain(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "login", "azuread_default_chain_auth")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_LoginToDefaultChainAzCli(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "login", "azuread_default_chain_auth_az_cli")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_LoginToManagedIdentity(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "login", "azuread_managed_identity_auth")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_AzureLoginToLogin(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azure_login", "login")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_AzureLoginToDefaultChain(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azure_login", "azuread_default_chain_auth")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_AzureLoginToDefaultChainAzCli(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azure_login", "azuread_default_chain_auth_az_cli")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_AzureLoginToManagedIdentity(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azure_login", "azuread_managed_identity_auth")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_DefaultChainToLogin(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_default_chain_auth", "login")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_DefaultChainToAzureLogin(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_default_chain_auth", "azure_login")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_DefaultChainToDefaultChainAzCli(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_default_chain_auth", "azuread_default_chain_auth_az_cli")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_DefaultChainToManagedIdentity(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_default_chain_auth", "azuread_managed_identity_auth")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_DefaultChainAzCliToLogin(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_default_chain_auth_az_cli", "login")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_DefaultChainAzCliToAzureLogin(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_default_chain_auth_az_cli", "azure_login")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_DefaultChainAzCliToDefaultChain(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_default_chain_auth_az_cli", "azuread_default_chain_auth")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_DefaultChainAzCliToManagedIdentity(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_default_chain_auth_az_cli", "azuread_managed_identity_auth")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_ManagedIdentityToLogin(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_managed_identity_auth", "login")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_ManagedIdentityToAzureLogin(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_managed_identity_auth", "azure_login")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_ManagedIdentityToDefaultChain(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_managed_identity_auth", "azuread_default_chain_auth")
+}
+
+func TestServerBlockAuthChangeUsesNewMethod_ManagedIdentityToDefaultChainAzCli(t *testing.T) {
+	testServerBlockAuthChangeUsesNewMethod(t, "azuread_managed_identity_auth", "azuread_default_chain_auth_az_cli")
 }
