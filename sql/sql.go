@@ -39,16 +39,19 @@ func (f factory) GetConnector(prefix string, data *schema.ResourceData) (interfa
 		Timeout: data.Timeout(schema.TimeoutRead),
 	}
 
-	if admin, ok := data.GetOk(prefix + "login.0"); ok {
-		admin := admin.(map[string]interface{})
+	// The blocks are read by the length of their list, not with GetOk(".0"): during an
+	// update that replaces the block with another one, GetOk(".0") still returns the
+	// removed block, with empty values, and the new authentication would be ignored.
+	if list, ok := data.Get(prefix + "login").([]interface{}); ok && len(list) > 0 && list[0] != nil {
+		admin := list[0].(map[string]interface{})
 		connector.Login = &LoginUser{
 			Username: admin["username"].(string),
 			Password: admin["password"].(string),
 		}
 	}
 
-	if admin, ok := data.GetOk(prefix + "azure_login.0"); ok {
-		admin := admin.(map[string]interface{})
+	if list, ok := data.Get(prefix + "azure_login").([]interface{}); ok && len(list) > 0 && list[0] != nil {
+		admin := list[0].(map[string]interface{})
 		connector.AzureLogin = &AzureLogin{
 			TenantID:     admin["tenant_id"].(string),
 			ClientID:     admin["client_id"].(string),

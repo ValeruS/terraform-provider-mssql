@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ValeruS/terraform-provider-mssql/sql"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
@@ -298,4 +300,100 @@ func TestServerBlockCredentialsChangeIsInPlace_ServerRoleMember(t *testing.T) {
 
 func TestServerBlockCredentialsChangeIsInPlace_User(t *testing.T) {
 	testServerBlockCredentialsChangeIsInPlace(t, "mssql_user")
+}
+
+// TestServerBlockAuthChangeUsesNewMethod checks that an update which replaces the
+// authentication block of the server block connects with the new block, not with
+// the removed one.
+func TestServerBlockAuthChangeUsesNewMethod(t *testing.T) {
+	blocks := map[string]struct {
+		state  map[string]string
+		config map[string]interface{}
+		want   string
+	}{
+		"login": {
+			state:  map[string]string{"server.0.login.#": "1", "server.0.login.0.username": "sa", "server.0.login.0.password": "p"},
+			config: map[string]interface{}{"login": []interface{}{map[string]interface{}{"username": "sa", "password": "p"}}},
+			want:   "login",
+		},
+		"azure_login": {
+			state:  map[string]string{"server.0.azure_login.#": "1", "server.0.azure_login.0.tenant_id": "t", "server.0.azure_login.0.client_id": "c", "server.0.azure_login.0.client_secret": "s"},
+			config: map[string]interface{}{"azure_login": []interface{}{map[string]interface{}{"tenant_id": "t", "client_id": "c", "client_secret": "s"}}},
+			want:   "azure_login",
+		},
+		"azuread_default_chain_auth": {
+			state:  map[string]string{"server.0.azuread_default_chain_auth.#": "1", "server.0.azuread_default_chain_auth.0.use_oidc": "false", "server.0.azuread_default_chain_auth.0.credential_type": ""},
+			config: map[string]interface{}{"azuread_default_chain_auth": []interface{}{map[string]interface{}{}}},
+			want:   "default_chain",
+		},
+		"azuread_default_chain_auth_az_cli": {
+			state:  map[string]string{"server.0.azuread_default_chain_auth.#": "1", "server.0.azuread_default_chain_auth.0.use_oidc": "false", "server.0.azuread_default_chain_auth.0.credential_type": "az_cli"},
+			config: map[string]interface{}{"azuread_default_chain_auth": []interface{}{map[string]interface{}{"credential_type": "az_cli"}}},
+			want:   "credential_type",
+		},
+		"azuread_managed_identity_auth": {
+			state:  map[string]string{"server.0.azuread_managed_identity_auth.#": "1", "server.0.azuread_managed_identity_auth.0.user_id": ""},
+			config: map[string]interface{}{"azuread_managed_identity_auth": []interface{}{map[string]interface{}{}}},
+			want:   "managed_identity",
+		},
+	}
+
+	for from, fromBlock := range blocks {
+		for to, toBlock := range blocks {
+			if from == to {
+				continue
+			}
+			t.Run(from+"_to_"+to, func(t *testing.T) {
+				var got string
+				r := &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						serverProp: {Type: schema.TypeList, MaxItems: 1, Required: true, Elem: &schema.Resource{Schema: getServerSchema(serverProp)}},
+					},
+					CreateContext: func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics { return nil },
+					ReadContext:   func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics { return nil },
+					DeleteContext: func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics { return nil },
+					UpdateContext: func(_ context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
+						c, err := sql.GetFactory().GetConnector(serverProp, d)
+						if err != nil {
+							return diag.FromErr(err)
+						}
+						connector := c.(*sql.Connector)
+						switch {
+						case connector.Login != nil:
+							got = "login"
+						case connector.AzureLogin != nil:
+							got = "azure_login"
+						case connector.FedauthMSI != nil:
+							got = "managed_identity"
+						case connector.FedauthCredential != "":
+							got = "credential_type"
+						default:
+							got = "default_chain"
+						}
+						return nil
+					},
+				}
+
+				attributes := map[string]string{"id": "x", "server.#": "1", "server.0.host": "h", "server.0.port": "1433"}
+				for k, v := range fromBlock.state {
+					attributes[k] = v
+				}
+				server := map[string]interface{}{"host": "h"}
+				for k, v := range toBlock.config {
+					server[k] = v
+				}
+				state := &terraform.InstanceState{ID: "x", Attributes: attributes}
+				diff, err := r.SimpleDiff(context.Background(), state, terraform.NewResourceConfigRaw(map[string]interface{}{serverProp: []interface{}{server}}), nil)
+				if err != nil {
+					t.Fatalf("diff returned error: %v", err)
+				}
+				if _, diags := r.Apply(context.Background(), state, diff, nil); diags.HasError() {
+					t.Fatalf("apply returned error: %v", diags)
+				}
+				if got != toBlock.want {
+					t.Errorf("update connected with %s, want %s", got, toBlock.want)
+				}
+			})
+		}
+	}
 }
