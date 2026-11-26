@@ -68,6 +68,8 @@ type TestConnector interface {
 	GetDatabasePermissions(database, name string) (*model.DatabasePermissions, error)
 	GetDatabaseRole(database, name string) (*model.DatabaseRole, error)
 	GetDatabaseSchema(database, name string) (*model.DatabaseSchema, error)
+	GetDatabaseSchemaPermission(database, schemaName, principalName string) (*model.DatabaseSchemaPermission, error)
+	GetDatabaseObjectPermission(database, schemaName, objectName, columnName, principalName string) (*model.DatabaseObjectPermission, error)
 	GetDatabaseCredential(database, name string) (*model.DatabaseCredential, error)
 	GetAzureExternalDatasource(database, name string) (*model.AzureExternalDatasource, error)
 	GetDatabaseMasterkey(database string) (*model.DatabaseMasterkey, error)
@@ -181,6 +183,14 @@ func (t testConnector) GetDatabaseRole(database string, roleName string) (*model
 
 func (t testConnector) GetDatabaseSchema(database string, schemaName string) (*model.DatabaseSchema, error) {
 	return t.c.(DatabaseSchemaConnector).GetDatabaseSchema(context.Background(), database, schemaName)
+}
+
+func (t testConnector) GetDatabaseSchemaPermission(database, schemaName, principalName string) (*model.DatabaseSchemaPermission, error) {
+	return t.c.(DatabaseSchemaPermissionConnector).GetDatabaseSchemaPermission(context.Background(), database, schemaName, principalName)
+}
+
+func (t testConnector) GetDatabaseObjectPermission(database, schemaName, objectName, columnName, principalName string) (*model.DatabaseObjectPermission, error) {
+	return t.c.(DatabaseObjectPermissionConnector).GetDatabaseObjectPermission(context.Background(), database, schemaName, objectName, columnName, principalName)
 }
 
 func (t testConnector) GetDatabaseCredential(database, credentialName string) (*model.DatabaseCredential, error) {

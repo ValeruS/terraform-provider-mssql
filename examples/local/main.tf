@@ -6,8 +6,8 @@ terraform {
       version = "~> 3.0"
     }
     mssql = {
-      source  = "valerus/mssql"
-      version = "~> 0.2"
+      source  = "ValeruS/mssql"
+      version = "~> 0.10"
     }
     random = {
       source  = "hashicorp/random"
@@ -186,6 +186,43 @@ resource "mssql_database_schema" "example" {
   }
   database = "master"
   schema_name = "testschema"
+}
+
+resource "mssql_database_schema_permission" "example" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  database       = "master"
+  schema_name    = mssql_database_schema.example.schema_name
+  principal_name = "username"
+  permissions    = [
+    "SELECT",
+    "INSERT",
+    "EXECUTE",
+  ]
+}
+
+resource "mssql_database_object_permission" "example" {
+  server {
+    host = docker_container.mssql.ip_address
+    login {
+      username = local.local_username
+      password = local.local_password
+    }
+  }
+  database       = "master"
+  schema_name    = "dbo"
+  object_name    = "orders"
+  principal_name = "username"
+  permissions    = [
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+  ]
 }
 
 resource "mssql_database_schema" "example_authorization" {

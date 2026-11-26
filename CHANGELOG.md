@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0]
+
+### Added
+
+- `mssql_database_schema_permission` resource and data source: grant and revoke permissions on a schema for a database
+  principal, a user or a role (`GRANT ... ON SCHEMA::`), with in-place updates and import
+  (`.../<database>/schema_permission/<schema_name>/<principal_name>`)
+- `mssql_database_object_permission` resource and data source: grant and revoke permissions on a database object
+  (table, view, procedure, function, sequence or synonym), or on one of its columns with `column_name`, for a database
+  principal, a user or a role (`GRANT ... ON OBJECT::`), with in-place updates and import
+  (`.../<database>/object_permission/<schema_name>/<object_name>/<principal_name>[/<column_name>]`)
+
 ## [0.9.2]
 
 ### Fixed
@@ -341,7 +353,27 @@ Initial release.
 ### Fixed
 - Fixed issue where resource property updates (including password, secrets, default_language, default_database) were not properly triggering resource recreation when the SQL Server-side update operation failed
 
-[Unreleased]: https://github.com/betr-io/terraform-provider-mssql/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.9.2...v0.10.0
+[0.9.2]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.9.1...v0.9.2
+[0.9.1]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.9.0...v0.9.1
+[0.9.0]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.7.3...v0.8.0
+[0.7.3]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.7.2...v0.7.3
+[0.7.2]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.5.2...v0.6.0
+[0.5.2]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.4.1...v0.5.0
+[0.4.1]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.3.9...v0.4.0
+[0.3.9]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.3.8...v0.3.9
+[0.3.8]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.3.7...v0.3.8
+[0.3.7]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.3.6...v0.3.7
+[0.3.6]: https://github.com/ValeruS/terraform-provider-mssql/compare/v0.3.5...v0.3.6
+[0.3.5]: https://github.com/ValeruS/terraform-provider-mssql/releases/tag/v0.3.5
 [0.2.7]: https://github.com/betr-io/terraform-provider-mssql/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/betr-io/terraform-provider-mssql/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/betr-io/terraform-provider-mssql/compare/v0.2.4...v0.2.5
